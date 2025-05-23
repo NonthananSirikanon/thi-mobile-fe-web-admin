@@ -1,14 +1,27 @@
 import React from 'react';
 import { Switch } from 'antd';
 
-const onChange = (checked: boolean) => {
-  console.log(`switch to ${checked}`);
+interface BannerToggleProps {
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  showLabel?: boolean;
+}
+
+const BannerToggle: React.FC<BannerToggleProps> = ({
+  checked,
+  onChange,
+  showLabel = true,
+}) => {
+  return (
+    <div className="flex items-center space-x-2">
+      <Switch checked={checked} onChange={onChange} />
+      {showLabel && (
+        <span style={{ color: '#666', fontSize: '14px' }}>
+          Active / Inactive banner
+        </span>
+      )}
+    </div>
+  );
 };
 
-const SwitchComponent: React.FC = () => (
-  <div>
-    <Switch defaultChecked onChange={onChange} />
-  </div>
-);
-
-export default SwitchComponent;
+export default BannerToggle;

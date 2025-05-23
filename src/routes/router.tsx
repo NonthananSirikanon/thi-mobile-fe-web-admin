@@ -1,4 +1,3 @@
-// routes/Router.tsx
 import { Routes, Route } from 'react-router-dom'
 import App from '../App'
 import Layout from '../components/layout'

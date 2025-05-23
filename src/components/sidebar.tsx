@@ -61,14 +61,14 @@ const ProSidebar: React.FC<ProSidebarProps> = ({ className = "" }) => {
           borderRight: "1px solid #e5e7eb",
         }}
       >
-        {/* Sidebar Header */}
+        
         <div className="p-4 border-b border-gray-200 flex items-center justify-between">
           {!collapsed && (
             <h2 className="text-lg font-semibold text-gray-800">Menu</h2>
           )}
           <button
             onClick={() => setCollapsed(!collapsed)}
-            className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+            className="p-2 rounded-lg hover:bg-gray-100 transition-colors "
           >
             {collapsed ? (
               <ChevronRight className="w-5 h-5 text-gray-600" />
@@ -78,7 +78,7 @@ const ProSidebar: React.FC<ProSidebarProps> = ({ className = "" }) => {
           </button>
         </div>
 
-        {/* Menu Items */}
+        
         <Menu menuItemStyles={menuItemStyles}>
           <MenuItem icon={<Home />} component={<Link to="/" />}>
             Dashboard
