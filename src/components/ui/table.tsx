@@ -1,4 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useContext, useMemo } from 'react';
+import { Table, Switch, Button, Image, Dropdown, } from 'antd';
+import { HolderOutlined, MoreOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import type { DragEndEvent } from '@dnd-kit/core';
+import { DndContext } from '@dnd-kit/core';
+import type { SyntheticListenerMap } from '@dnd-kit/core/dist/hooks/utilities';
+import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
+import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import type { TableColumnsType } from 'antd';
 
 // ============ TYPES & INTERFACES ============
 export interface TableDataModel {
@@ -17,307 +26,360 @@ export interface TableModel {
   body: TableBodyModel;
 }
 
-// ============ ANT DESIGN SWITCH COMPONENT ============
-const AntSwitch: React.FC<{ checked: boolean; onChange?: (checked: boolean) => void }> = ({ 
-  checked, 
-  onChange 
-}) => (
-  <button
-    onClick={() => onChange?.(!checked)}
-    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-      checked ? 'bg-blue-500' : 'bg-gray-300'
-    }`}
-  >
-    <span
-      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-all duration-200 shadow-md ${
-        checked ? 'translate-x-6' : 'translate-x-1'
-      }`}
-    />
-  </button>
-);
-
-// ============ DRAG HANDLE COMPONENT ============
-const DragHandle: React.FC<{ onDragStart?: (e: React.DragEvent) => void }> = ({ onDragStart }) => (
-  <td className="p-3 w-8">
-    <div 
-      className="flex items-center justify-center text-gray-400 cursor-move hover:text-gray-600 transition-colors"
-      draggable
-      onDragStart={onDragStart}
-      role="button"
-      tabIndex={0}
-    >
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-        <circle cx="3" cy="4" r="1"/>
-        <circle cx="3" cy="8" r="1"/>
-        <circle cx="3" cy="12" r="1"/>
-        <circle cx="8" cy="4" r="1"/>
-        <circle cx="8" cy="8" r="1"/>
-        <circle cx="8" cy="12" r="1"/>
-        <circle cx="13" cy="4" r="1"/>
-        <circle cx="13" cy="8" r="1"/>
-        <circle cx="13" cy="12" r="1"/>
-      </svg>
-    </div>
-  </td>
-);
-
-// ============ STATUS TOGGLE COMPONENT ============
-const StatusToggle: React.FC<{ isActive: boolean; onChange?: (checked: boolean) => void }> = ({ 
-  isActive, 
-  onChange 
-}) => (
-  <td className="p-3 w-20">
-    <AntSwitch checked={isActive} onChange={onChange} />
-  </td>
-);
-
-// ============ BANNER COMPONENT ============
-const BannerImage: React.FC<{ src?: string; alt?: string }> = ({ 
-  src, 
-  alt = "Banner" 
-}) => (
-  <td className="p-3 w-24">
-    <div className="w-16 h-10 rounded overflow-hidden border border-gray-200">
-      {src ? (
-        <img 
-          src={src} 
-          alt={alt} 
-          className="w-full h-full object-cover"
-          onError={(e) => {
-            // Fallback if image fails to load
-            e.currentTarget.style.display = 'none';
-            if (e.currentTarget.nextElementSibling) {
-              (e.currentTarget.nextElementSibling as HTMLElement).style.display = 'flex';
-            }
-          }}
-        />
-      ) : null}
-      <div 
-        className={`w-full h-full bg-gradient-to-r from-purple-500 to-blue-500 flex items-center justify-center text-white text-xs font-bold ${src ? 'hidden' : 'flex'}`}
-      >
-        BANNER
-      </div>
-    </div>
-  </td>
-);
-
-// ============ URL COMPONENT ============
-const UrlCell: React.FC<{ url: string }> = ({ url }) => (
-  <td className="p-3">
-    {url === '-' ? (
-      <span className="text-gray-400">-</span>
-    ) : (
-      <a 
-        href={url} 
-        className="text-blue-600 hover:text-blue-800 hover:underline text-sm"
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        {url}
-      </a>
-    )}
-  </td>
-);
-
-// ============ TEXT CELL COMPONENT ============
-const TextCell: React.FC<{ text: string; className?: string }> = ({ text, className = '' }) => (
-  <td className={`p-3 text-sm text-gray-700 ${className}`}>
-    {text}
-  </td>
-);
-
-// ============ DATE TIME CELL COMPONENT ============
-const DateTimeCell: React.FC<{ date: string; time: string }> = ({ date, time }) => (
-  <td className="p-3 text-sm text-gray-700">
-    <div className="leading-tight">
-      <div>{date}</div>
-      <div className="text-gray-500">{time}</div>
-    </div>
-  </td>
-);
-
-// ============ ACTION MENU COMPONENT ============
-const ActionMenu: React.FC<{ onAction?: () => void }> = ({ onAction }) => (
-  <td className="p-3 w-12">
-    <button
-      onClick={onAction}
-      className="inline-flex items-center justify-center p-2 rounded hover:bg-gray-100 transition-colors"
-    >
-      <svg className="w-4 h-4 text-gray-500" fill="currentColor" viewBox="0 0 16 16">
-        <circle cx="2" cy="8" r="1.5"/>
-        <circle cx="8" cy="8" r="1.5"/>
-        <circle cx="14" cy="8" r="1.5"/>
-      </svg>
-    </button>
-  </td>
-);
-
-// ============ TABLE HEADER COMPONENT ============
-const TableHeader: React.FC<{ headers: string[] }> = ({ headers }) => (
-  <thead className="bg-gray-50 border-b border-gray-200">
-    <tr>
-      {headers.map((header, index) => (
-        <th
-          key={index}
-          className="p-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-        >
-          {header}
-        </th>
-      ))}
-    </tr>
-  </thead>
-);
-
-// ============ TABLE ROW COMPONENT ============
-interface TableRowProps {
-  data: {
-    position: string;
-    status: boolean;
-    banner?: string;
-    url: string;
-    createdBy: string;
-    editedBy: string;
-    startDate: string;
-    startTime: string;
-    endDate: string;
-    endTime: string;
-    duration: string;
-    publishDate: string;
-    publishTime: string;
-  };
-  index: number;
-  onAction?: () => void;
-  onStatusChange?: (checked: boolean) => void;
-  onDragStart?: (e: React.DragEvent, index: number) => void;
-  onDragOver?: (e: React.DragEvent) => void;
-  onDrop?: (e: React.DragEvent, index: number) => void;
-  isDragging?: boolean;
+// ============ DRAG CONTEXT ============
+interface RowContextProps {
+  setActivatorNodeRef?: (element: HTMLElement | null) => void;
+  listeners?: SyntheticListenerMap;
 }
 
-const TableRow: React.FC<TableRowProps> = ({ 
-  data, 
-  index, 
-  onAction, 
-  onStatusChange, 
-  onDragStart, 
-  onDragOver, 
-  onDrop,
-  isDragging 
-}) => (
-  <tr 
-    className={`border-b border-gray-200 hover:bg-gray-50 transition-colors ${
-      isDragging ? 'opacity-50' : ''
-    }`}
-    onDragOver={onDragOver}
-    onDrop={(e) => onDrop?.(e, index)}
-  >
-    <DragHandle onDragStart={(e) => onDragStart?.(e, index)} />
-    <StatusToggle isActive={data.status} onChange={onStatusChange} />
-    <BannerImage src={data.banner} />
-    <UrlCell url={data.url} />
-    <TextCell text={data.createdBy} />
-    <TextCell text={data.editedBy} />
-    <DateTimeCell date={data.startDate} time={data.startTime} />
-    <DateTimeCell date={data.endDate} time={data.endTime} />
-    <TextCell text={data.duration} className="text-center" />
-    <DateTimeCell date={data.publishDate} time={data.publishTime} />
-    <ActionMenu onAction={onAction} />
-  </tr>
-);
+const RowContext = React.createContext<RowContextProps>({});
 
-// ============ MAIN TABLE COMPONENT ============
-export const Table: React.FC<TableModel> = ({ header, body }) => {
-  const [tableData, setTableData] = useState(body.data);
-  const [draggedItem, setDraggedItem] = useState<number | null>(null);
-
-  const handleDragStart = (e: React.DragEvent, index: number) => {
-    setDraggedItem(index);
-    e.dataTransfer.effectAllowed = 'move';
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-  };
-
-  const handleDrop = (e: React.DragEvent, dropIndex: number) => {
-    e.preventDefault();
-    
-    if (draggedItem === null || draggedItem === dropIndex) {
-      setDraggedItem(null);
-      return;
-    }
-
-    const newData = [...tableData];
-    const draggedItemData = newData[draggedItem];
-    
-    // Remove dragged item
-    newData.splice(draggedItem, 1);
-    
-    // Insert at new position
-    const insertIndex = draggedItem < dropIndex ? dropIndex - 1 : dropIndex;
-    newData.splice(insertIndex, 0, draggedItemData);
-    
-    setTableData(newData);
-    setDraggedItem(null);
-  };
-
-  const handleStatusChange = (index: number, checked: boolean) => {
-    const newData = [...tableData];
-    // Update the status in the text array
-    newData[index] = {
-      ...newData[index],
-      text: [
-        ...newData[index].text.slice(0, 1),
-        checked.toString(),
-        ...newData[index].text.slice(2)
-      ]
-    };
-    setTableData(newData);
-  };
-
+const DragHandle: React.FC = () => {
+  const { setActivatorNodeRef, listeners } = useContext(RowContext);
   return (
-    <div className="bg-white shadow-sm rounded-lg overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <TableHeader headers={header} />
-          <tbody className="bg-white divide-y divide-gray-200">
-            {tableData.map((item, index) => {
-              // Parse the text array into structured data
-              const rowData = {
-                position: item.text[0] || '',
-                status: item.text[1] === 'true' || item.text[1]?.includes('true'),
-                banner: item.text[2] !== 'banner' && item.text[2] ? item.text[2] : undefined,
-                url: item.text[3] || '-',
-                createdBy: item.text[4] || 'Text',
-                editedBy: item.text[5] || 'Text',
-                startDate: item.text[6]?.split(' ')[0] || '31/08/2022',
-                startTime: item.text[6]?.split(' ')[1] || '20:00',
-                endDate: item.text[7]?.split(' ')[0] || '31/08/2022',
-                endTime: item.text[7]?.split(' ')[1] || '20:00',
-                duration: item.text[8] || '5(s)',
-                publishDate: item.text[9]?.split(' ')[0] || '31/12/2024',
-                publishTime: item.text[9]?.split(' ')[1] || '20:00',
-              };
-
-              return (
-                <TableRow
-                  key={`${index}-${item.text[0]}`}
-                  data={rowData}
-                  index={index}
-                  onAction={item.function.onClick}
-                  onStatusChange={(checked) => handleStatusChange(index, checked)}
-                  onDragStart={handleDragStart}
-                  onDragOver={handleDragOver}
-                  onDrop={handleDrop}
-                  isDragging={draggedItem === index}
-                />
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-    </div>
+    <Button
+      type="text"
+      size="small"
+      icon={<HolderOutlined />}
+      style={{ cursor: 'move' }}
+      ref={setActivatorNodeRef}
+      {...listeners}
+    />
   );
 };
 
+// ============ DATA TYPE ============
+interface DataType {
+  key: string;
+  position: string;
+  status: boolean;
+  banner?: string;
+  url: string;
+  createdBy: string;
+  editedBy: string;
+  startDate: string;
+  startTime: string;
+  endDate: string;
+  endTime: string;
+  duration: string;
+  publishDate: string;
+  publishTime: string;
+  onAction?: () => void;
+}
+
+// ============ ROW COMPONENT ============
+interface RowProps extends React.HTMLAttributes<HTMLTableRowElement> {
+  'data-row-key': string;
+}
+
+const Row: React.FC<RowProps> = (props) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    setActivatorNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: props['data-row-key'],
+  });
+
+  const style: React.CSSProperties = {
+    ...props.style,
+    transform: CSS.Translate.toString(transform),
+    transition,
+    ...(isDragging ? { position: 'relative', zIndex: 9999 } : {}),
+  };
+
+  const contextValue = useMemo<RowContextProps>(
+    () => ({ setActivatorNodeRef, listeners }),
+    [setActivatorNodeRef, listeners],
+  );
+
+  return (
+    <RowContext.Provider value={contextValue}>
+      <tr {...props} ref={setNodeRef} style={style} {...attributes} />
+    </RowContext.Provider>
+  );
+};
+
+// ============ ACTIONS DROPDOWN COMPONENT ============
+interface ActionsDropdownProps {
+  record: DataType;
+  onEdit: (record: DataType) => void;
+  onDelete: (record: DataType) => void;
+}
+
+const ActionsDropdown: React.FC<ActionsDropdownProps> = ({ record, onEdit, onDelete }) => {
+  const menuItems = [
+    {
+      key: 'edit',
+      icon: <EditOutlined />,
+      label: 'แก้ไข',
+      onClick: () => onEdit(record),
+    },
+    {
+      key: 'delete',
+      icon: <DeleteOutlined />,
+      label: 'ลบ',
+      onClick: () => onDelete(record),
+      danger: true,
+    },
+  ];
+
+  return (
+    <Dropdown
+      menu={{ items: menuItems }}
+      placement="bottomRight"
+      trigger={['click']}
+      arrow={{ pointAtCenter: true }}
+    >
+      <Button
+        type="text"
+        size="small"
+        icon={<MoreOutlined />}
+      />
+    </Dropdown>
+  );
+};
+
+// ============ MAIN TABLE COMPONENT ============
+export const AntTable: React.FC<Omit<TableModel, 'header'>> = ({ body }) => {
+  // Transform data from TableDataModel to DataType
+  const [dataSource, setDataSource] = useState<DataType[]>(() => 
+    body.data.map((item, index) => ({
+      key: `row-${index}`,
+      position: item.text[0] || '',
+      status: item.text[1] === 'true' || item.text[1]?.includes('true'),
+      banner: item.text[2] && item.text[2] !== 'banner' ? item.text[2] : undefined,
+      url: item.text[3] || '-',
+      createdBy: item.text[4] || 'Text',
+      editedBy: item.text[5] || 'Text',
+      startDate: item.text[6]?.split(' ')[0] || '31/08/2022',
+      startTime: item.text[6]?.split(' ')[1] || '20:00',
+      endDate: item.text[7]?.split(' ')[0] || '31/08/2022',
+      endTime: item.text[7]?.split(' ')[1] || '20:00',
+      duration: item.text[8] || '5(s)',
+      publishDate: item.text[9]?.split(' ')[0] || '31/12/2024',
+      publishTime: item.text[9]?.split(' ')[1] || '20:00',
+      onAction: item.function.onClick,
+    }))
+  );
+
+  const handleStatusChange = (key: string, checked: boolean) => {
+    setDataSource(prev => 
+      prev.map(item => 
+        item.key === key ? { ...item, status: checked } : item
+      )
+    );
+  };
+
+  const handleEdit = (record: DataType) => {
+    console.log('Edit record:', record);
+    // เรียก function เดิมถ้ามี
+    if (record.onAction) {
+      record.onAction();
+    }
+    // เพิ่ม logic สำหรับแก้ไขตรงนี้
+  };
+
+  const handleDelete = (record: DataType) => {
+    console.log('Delete record:', record);
+    // เพิ่ม logic สำหรับลบตรงนี้
+    setDataSource(prev => prev.filter(item => item.key !== record.key));
+  };
+
+  const onDragEnd = ({ active, over }: DragEndEvent) => {
+    if (active.id !== over?.id) {
+      setDataSource((prevState) => {
+        const activeIndex = prevState.findIndex((record) => record.key === active?.id);
+        const overIndex = prevState.findIndex((record) => record.key === over?.id);
+        return arrayMove(prevState, activeIndex, overIndex);
+      });
+    }
+  };
+
+  const columns: TableColumnsType<DataType> = [
+    {
+      title: 'POSITION',
+      dataIndex: 'position',
+      key: 'position',
+      width: 100,
+      render: () => (
+        <div className="flex items-center gap-2">
+          <DragHandle />
+        </div>
+      ),
+    },
+    {
+      title: 'STATUS',
+      dataIndex: 'status',
+      key: 'status',
+      width: 100,
+      align: 'center',
+      render: (status: boolean, record) => (
+        <Switch
+          checked={status}
+          onChange={(checked) => handleStatusChange(record.key, checked)}
+          size="small"
+        />
+      ),
+    },
+    {
+      title: 'BANNER',
+      dataIndex: 'banner',
+      key: 'banner',
+      width: 120,
+      align: 'center',
+      render: (banner?: string) => (
+        <div className="flex justify-center">
+          <div className="w-16 h-10 rounded overflow-hidden border border-gray-200">
+            {banner ? (
+              <Image
+                src={banner}
+                alt="Banner"
+                width={64}
+                height={40}
+                style={{ objectFit: 'cover' }}
+                fallback="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA2NCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjQwIiBmaWxsPSJ1cmwoI3BhaW50MF9saW5lYXJfMF8xKSIvPgo8dGV4dCB4PSIzMiIgeT0iMjIiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMCIgZm9udC13ZWlnaHQ9ImJvbGQiIGZpbGw9IndoaXRlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5CQU5ORVI8L3RleHQ+CjxkZWZzPgo8bGluZWFyR3JhZGllbnQgaWQ9InBhaW50MF9saW5lYXJfMF8xIiB4MT0iMCIgeTE9IjAiIHgyPSI2NCIgeTI9IjQwIiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+CjxzdG9wIHN0b3AtY29sb3I9IiM4QjVDRjYiLz4KPHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjMzk4M0Y2Ii8+CjwvbGluZWFyR3JhZGllbnQ+CjwvZGVmcz4KPHN2Zz4K"
+              />
+            ) : (
+              <div className="w-full h-full bg-gradient-to-r from-purple-500 to-blue-500 flex items-center justify-center text-white text-xs font-bold">
+                BANNER
+              </div>
+            )}
+          </div>
+        </div>
+      ),
+    },
+    {
+      title: 'URL',
+      dataIndex: 'url',
+      key: 'url',
+      width: 200,
+      render: (url: string) => {
+        if (url === '-') {
+          return <span className="text-gray-400">-</span>;
+        }
+        return (
+          <a
+            href={url}
+            className="text-blue-600 hover:text-blue-800 hover:underline max-w-[180px] truncate block"
+            target="_blank"
+            rel="noopener noreferrer"
+            title={url}
+          >
+            {url}
+          </a>
+        );
+      },
+    },
+    {
+      title: 'CREATED BY',
+      dataIndex: 'createdBy',
+      key: 'createdBy',
+      width: 120,
+      render: (text: string) => (
+        <span className="text-gray-900">{text}</span>
+      ),
+    },
+    {
+      title: 'EDITED BY',
+      dataIndex: 'editedBy',
+      key: 'editedBy',
+      width: 120,
+      render: (text: string) => (
+        <span className="text-gray-900">{text}</span>
+      ),
+    },
+    {
+      title: 'START DATE- START TIME',
+      key: 'startDateTime',
+      width: 150,
+      render: (_, record) => (
+        <div className="text-center">
+          <div className="text-gray-900 font-medium">{record.startDate}</div>
+          <div className="text-gray-500 text-sm">{record.startTime}</div>
+        </div>
+      ),
+    },
+    {
+      title: 'END DATE - END TIME',
+      key: 'endDateTime',
+      width: 150,
+      render: (_, record) => (
+        <div className="text-center">
+          <div className="text-gray-900 font-medium">{record.endDate}</div>
+          <div className="text-gray-500 text-sm">{record.endTime}</div>
+        </div>
+      ),
+    },
+    {
+      title: 'DURATION',
+      dataIndex: 'duration',
+      key: 'duration',
+      width: 100,
+      align: 'center',
+      render: (text: string) => (
+        <span className="text-gray-900 font-medium">{text}</span>
+      ),
+    },
+    {
+      title: 'PUBLISH',
+      key: 'publishDateTime',
+      width: 130,
+      render: (_, record) => (
+        <div className="text-center">
+          <div className="text-gray-900 font-medium">{record.publishDate}</div>
+          <div className="text-gray-500 text-sm">{record.publishTime}</div>
+        </div>
+      ),
+    },
+    {
+      title: 'ACTION',
+      key: 'actions',
+      width: 80,
+      align: 'center',
+      render: (_, record) => (
+        <ActionsDropdown
+          record={record}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+        />
+      ),
+    },
+  ];
+
+  return (
+    <div className="bg-white shadow-sm rounded-lg overflow-hidden">
+      <DndContext modifiers={[restrictToVerticalAxis]} onDragEnd={onDragEnd}>
+        <SortableContext
+          items={dataSource.map((i) => i.key)}
+          strategy={verticalListSortingStrategy}
+        >
+          <Table<DataType>
+            rowKey="key"
+            components={{
+              body: {
+                row: Row,
+              },
+            }}
+            columns={columns}
+            dataSource={dataSource}
+            pagination={false}
+            size="middle"
+            scroll={{ x: 'max-content' }}
+            style={{
+              '--ant-table-header-bg': '#fafafa',
+              '--ant-table-header-color': '#8c8c8c',
+              '--ant-table-header-font-size': '12px',
+              '--ant-table-header-font-weight': '600',
+            } as React.CSSProperties}
+            className="[&_.ant-table-thead>tr>th]:bg-gray-50 [&_.ant-table-thead>tr>th]:text-gray-500 [&_.ant-table-thead>tr>th]:font-semibold [&_.ant-table-thead>tr>th]:text-xs [&_.ant-table-thead>tr>th]:uppercase [&_.ant-table-thead>tr>th]:tracking-wide [&_.ant-table-tbody>tr:hover>td]:bg-gray-50"
+          />
+        </SortableContext>
+      </DndContext>
+    </div>
+  );
+};
