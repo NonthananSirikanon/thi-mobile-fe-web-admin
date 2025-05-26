@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import  { useState } from 'react';
 import { Upload, message } from 'antd';
 import { CloudUploadOutlined } from '@ant-design/icons';
 import type { UploadProps, UploadFile } from 'antd';

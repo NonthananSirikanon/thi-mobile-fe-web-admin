@@ -32,6 +32,7 @@ export const URLInput: React.FC<URLInputProps> = ({
         value={value}
         onChange={handleChange}
         placeholder={placeholder}
+        style={{ height: 52 }}
         className="rounded border border-gray-300 w-full p-2"
       />
     </div>
