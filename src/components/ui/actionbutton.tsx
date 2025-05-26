@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button } from 'antd';
 
-export type ButtonType = 'addBanner' | 'previewAll' | 'publish' | 'cancel' | 'save';
+export type ButtonType = 'addBanner' | 'previewAll' | 'publish' | 'cancel' | 'save' | 'canceldialog';
 
 type ButtonConfig = {
   label: string;
@@ -41,6 +41,14 @@ const buttonConfigs: Record<ButtonType, ButtonConfig> = {
     bgColor: '#0065D0',
     textColor: '#FFFFFF',
     borderColor: '#0065D0',
+    width: 104,
+    height: 39,
+  },
+  canceldialog: {
+    label: 'CANCEL',
+    bgColor: '#FFFFFF',
+    textColor: '#F44336',
+    borderColor: '#F44336',
     width: 104,
     height: 39,
   },

@@ -1,41 +1,89 @@
 import React, { useState } from 'react';
 import './App.css';
-import BreadCrumbNavigation from './components/ui/breadcrumb';
 import StatusToggle from './components/ui/statustoggle';
-import BannerTable from './components/ui/bannertable';
 import ActionButton from './components/ui/actionbutton';
 import { Link } from 'react-router-dom';
+import { Table, type TableBodyModel } from './components/ui/table';
 
-const dummyData = [
-  {
-    key: '1',
-    position: '=',
-    status: true,
-    bannerUrl: 'https://via.placeholder.com/60x40?text=BANNER+Design',
-    link: 'https://ABC.com',
-    createdBy: 'Text',
-    editedBy: 'Text',
-    start: '31/08/2022 20:00',
-    end: '31/08/2022 20:00',
-    duration: '5(s)',
-    publish: '31/12/2024 20:00',
-  },
-];
 
 function App() {
   const [isActive, setIsActive] = useState(true);
-  const [data, setData] = useState(dummyData);
-
-  const handleToggle = (key: string, checked: boolean) => {
-    setData((prev) =>
-      prev.map((item) => (item.key === key ? { ...item, status: checked } : item))
-    );
-  };
+  //const [data, setData] = useState(dummyData);
+const headers = [
+      'POSITION',
+      'STATUS', 
+      'BANNER',
+      'URL',
+      'CREATED BY',
+      'EDITED BY',
+      'START DATE - START TIME',
+      'END DATE - END TIME',
+      'DURATION',
+      'PUBLISH',
+      'ACTION'
+    ];
   
+    const sampleData: TableBodyModel = {
+      data: [
+        {
+          text: [
+            '1',
+            'true',
+            'https://upload.wikimedia.org/wikipedia/commons/thumb/f/fe/Shopee.svg/1200px-Shopee.svg.png',
+            'https://example.com/campaign1',
+            'John Doe',
+            'Jane Smith',
+            '01/09/2024 09:00',
+            '30/09/2024 18:00',
+            '30 days',
+            '01/09/2024 08:00'
+          ],
+          function: {
+            onClick: () => console.log('Action clicked for row 1')
+          }
+        },
+        {
+          text: [
+            '2',
+            'false',
+            'https://via.placeholder.com/64x40/4ecdc4/ffffff?text=AD2',
+            'https://example.com/campaign2',
+            'Mike Johnson',
+            'Sarah Wilson',
+            '15/09/2024 10:00',
+            '15/10/2024 17:00',
+            '30 days',
+            '15/09/2024 09:00'
+          ],
+          function: {
+            onClick: () => console.log('Action clicked for row 2')
+          }
+        },
+        {
+          text: [
+            '3',
+            'true',
+            'banner',
+            '-',
+            'Alice Brown',
+            'Bob Davis',
+            '01/10/2024 14:00',
+            '31/10/2024 23:59',
+            '31 days',
+            '01/10/2024 13:00'
+          ],
+          function: {
+            onClick: () => console.log('Action clicked for row 3')
+          }
+        }
+      ]
+
+    };
+  
+
   return (
     
       <div className="space-y-6">
-        <BreadCrumbNavigation/> 
           <div className="">
             <StatusToggle checked={isActive} onChange={setIsActive} />
           </div>
@@ -58,7 +106,7 @@ function App() {
           </div>
         
           <div className="">
-            <BannerTable data={data} onToggleStatus={handleToggle} />
+            <Table header={headers} body={sampleData} />
           </div>
           
           <nav className="mt-4">

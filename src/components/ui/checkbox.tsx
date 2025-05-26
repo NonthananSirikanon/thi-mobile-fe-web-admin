@@ -1,11 +1,26 @@
 import React from 'react';
 import { Checkbox } from 'antd';
-import type { CheckboxProps } from 'antd';
 
-const onChange: CheckboxProps['onChange'] = (e) => {
-  console.log(`checked = ${e.target.checked}`);
+interface NoExpirationCheckboxProps {
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  label?: string;
+}
+
+const NoExpirationCheckbox: React.FC<NoExpirationCheckboxProps> = ({
+  checked,
+  onChange,
+  label = 'No expiration date.',
+}) => {
+  return (
+    <Checkbox
+      checked={checked}
+      onChange={(e) => onChange(e.target.checked)}
+      style={{ fontWeight: '500', fontSize: '16px' }}
+    >
+      {label}
+    </Checkbox>
+  );
 };
 
-const App: React.FC = () => <Checkbox onChange={onChange}>Checkbox</Checkbox>;
-
-export default App;
+export default NoExpirationCheckbox;
