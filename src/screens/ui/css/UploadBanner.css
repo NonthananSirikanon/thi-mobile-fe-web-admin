@@ -1,0 +1,5 @@
+.fullDragger :global(.ant-upload-drag) {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}

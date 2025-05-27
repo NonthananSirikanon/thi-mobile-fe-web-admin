@@ -86,7 +86,7 @@ const ProSidebar: React.FC<ProSidebarProps> = ({ className = "" }) => {
 
           <SubMenu label="Thailand Headline" icon={<FileText />}>
             <MenuItem component={<Link to="/" />}>Banner</MenuItem>
-            <MenuItem>News</MenuItem>
+            <MenuItem component={<Link to="/news"/>}>News</MenuItem>
           </SubMenu>
 
           <SubMenu label="Media" icon={<Image />}>
