@@ -1,114 +1,93 @@
-import React, { useState } from "react";
-import { Sidebar, Menu, MenuItem, SubMenu } from "react-pro-sidebar";
-import {
-  Home,
-  FileText,
-  Settings,
-  Users,
-  BarChart3,
-  Image,
-  Calendar,
-  ChevronLeft,
-  ChevronRight,
-} from "lucide-react";
-import { Link } from "react-router-dom";
+import { useState } from "react";
+import { Sidebar } from "react-pro-sidebar";
+import { ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Monitor } from "lucide-react";
+import { Link, useLocation } from "react-router-dom";
 
-interface ProSidebarProps {
-  className?: string;
+interface ThailandHeadlineProps {
+  collapsed: boolean;
 }
 
-const ProSidebar: React.FC<ProSidebarProps> = ({ className = "" }) => {
+const ThailandHeadline = ({ collapsed }: ThailandHeadlineProps) => {
+  const [isExpanded, setIsExpanded] = useState(true);
+  const { pathname } = useLocation();
+
+  const toggleExpand = () => setIsExpanded(!isExpanded);
+
+  const menuItems = [
+    { to: "/", label: "Banner" },
+    { to: "/news", label: "News" },
+  ];
+
+  return collapsed ? (
+    <div className="p-2">
+      <div className="w-12 h-12 bg-blue-500 rounded flex items-center justify-center mx-auto">
+        <Monitor className="w-6 h-6 text-white" />
+      </div>
+    </div>
+  ) : (
+    <div className="mx-3 my-2">
+      <button
+        className="flex items-center justify-between w-full p-3 rounded-md bg-blue-50 hover:bg-blue-100"
+        onClick={toggleExpand}
+      >
+        <div className="flex items-center gap-3">
+          <div className="w-6 h-6 bg-blue-500 rounded flex items-center justify-center">
+            <Monitor className="w-4 h-4 text-white" />
+          </div>
+          <span className="text-blue-600 font-medium text-sm">Thailand Headline</span>
+        </div>
+        {isExpanded ? (
+          <ChevronUp className="w-4 h-4 text-blue-600" />
+        ) : (
+          <ChevronDown className="w-4 h-4 text-blue-600" />
+        )}
+      </button>
+
+      {isExpanded && (
+        <div className="mt-2 space-y-1 ml-2">
+          {menuItems.map(({ to, label }) => {
+            const isActive = pathname === to;
+            const baseClass = "px-4 py-2 rounded-lg font-medium text-sm block";
+            const activeClass = isActive
+              ? "bg-blue-100 text-blue-700 hover:bg-blue-200"
+              : "text-gray-600 hover:bg-gray-100";
+
+            return (
+              <Link key={to} to={to}>
+                <div className={`${baseClass} ${activeClass}`}>{label}</div>
+              </Link>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const ProSidebar = ({ className = "" }) => {
   const [collapsed, setCollapsed] = useState(false);
 
-  const menuItemStyles = {
-    root: {
-      fontSize: "14px",
-      fontWeight: 400,
-    },
-    icon: {
-      color: "#6b7280",
-      "&:hover": {
-        color: "#3b82f6",
-      },
-    },
-    SubMenuExpandIcon: {
-      color: "#6b7280",
-    },
-    subMenuContent: {
-      backgroundColor: "#f8fafc",
-    },
-    button: {
-      "&:hover": {
-        backgroundColor: "#f1f5f9",
-        color: "#1e40af",
-      },
-      "&.ps-active": {
-        backgroundColor: "#dbeafe",
-        color: "#1e40af",
-      },
-    },
-  };
-
   return (
-    <div className={`h-screen ${className}`}>
-      <Sidebar
-        collapsed={collapsed}
-        backgroundColor="#ffffff"
-        width="280px"
-        collapsedWidth="80px"
-        style={{
-          height: "100%",
-          borderRight: "1px solid #e5e7eb",
-        }}
-      >
-        
-        <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-          {!collapsed && (
-            <h2 className="text-lg font-semibold text-gray-800">Menu</h2>
+    <Sidebar
+      collapsed={collapsed}
+      backgroundColor="#ffffff"
+      width="280px"
+      collapsedWidth="80px"
+      className={`h-screen ${className}`}
+      style={{ borderRight: "1px solid #e5e7eb" }}
+    >
+      <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+        {!collapsed && <h2 className="text-lg font-semibold text-gray-800">Menu</h2>}
+        <button onClick={() => setCollapsed(!collapsed)} className="p-2 rounded-lg hover:bg-gray-100">
+          {collapsed ? (
+            <ChevronRight className="w-5 h-5 text-gray-600" />
+          ) : (
+            <ChevronLeft className="w-5 h-5 text-gray-600" />
           )}
-          <button
-            onClick={() => setCollapsed(!collapsed)}
-            className="p-2 rounded-lg hover:bg-gray-100 transition-colors "
-          >
-            {collapsed ? (
-              <ChevronRight className="w-5 h-5 text-gray-600" />
-            ) : (
-              <ChevronLeft className="w-5 h-5 text-gray-600" />
-            )}
-          </button>
-        </div>
-
-        
-        <Menu menuItemStyles={menuItemStyles}>
-          <MenuItem icon={<Home />} component={<Link to="/" />}>
-            Dashboard
-          </MenuItem>
-
-          <SubMenu label="Thailand Headline" icon={<FileText />}>
-            <MenuItem component={<Link to="/" />}>Banner</MenuItem>
-            <MenuItem component={<Link to="/news"/>}>News</MenuItem>
-          </SubMenu>
-
-          <SubMenu label="Media" icon={<Image />}>
-            <MenuItem>Images</MenuItem>
-            <MenuItem>Videos</MenuItem>
-            <MenuItem>Gallery</MenuItem>
-          </SubMenu>
-
-          <MenuItem icon={<BarChart3 />}>Analytics</MenuItem>
-
-          <MenuItem icon={<Calendar />}>Schedule</MenuItem>
-
-          <MenuItem icon={<Users />}>User Management</MenuItem>
-
-          <SubMenu label="Settings" icon={<Settings />}>
-            <MenuItem>General</MenuItem>
-            <MenuItem>Appearance</MenuItem>
-            <MenuItem>Security</MenuItem>
-          </SubMenu>
-        </Menu>
-      </Sidebar>
-    </div>
+        </button>
+      </div>
+      <ThailandHeadline collapsed={collapsed} />
+    </Sidebar>
   );
 };
 
