@@ -11,8 +11,8 @@ interface UploadBannerProps {
   supportedFormats?: string[];
 }
 
-export default function UploadBanner({
-  title = "Upload banner",
+export default function UploadCover({
+  title = "Upload Cover Image",
   required = false,
   maxSize = 10,
   onFileChange,
@@ -54,7 +54,7 @@ export default function UploadBanner({
         {required && <span className="text-red-500 ml-1">*</span>}
       </div>
 
-      <div className="h-full">
+      <div className="h-full mx-90">
         <Upload.Dragger
           listType="picture"
           fileList={fileList}
@@ -63,7 +63,7 @@ export default function UploadBanner({
           multiple={false}
           showUploadList={{ showPreviewIcon: true, showRemoveIcon: true }}
         >
-          <div className="h-full p-3 flex flex-col items-center justify-center">
+          <div className="h-full p-20 flex flex-col items-center justify-center">
             <div className="text-blue-600 mb-4">
               <CloudUploadOutlined className="text-3xl" />
             </div>
@@ -71,9 +71,11 @@ export default function UploadBanner({
             <p className="text-gray-500 text-sm">Max {maxSize} MB files are allowed</p>
           </div>
         </Upload.Dragger>
+      <div className="mt-2 text-sm text-gray-500">
+        only {supportedFormats.join(', ')} are supported.
+      </div>
       </div>
 
-      
     </div>
   );
 }

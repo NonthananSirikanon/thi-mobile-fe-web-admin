@@ -4,13 +4,14 @@ import { useState } from "react";
 //import TimeInput from "../ui/time_Input";
 import UploadBanner from "../ui/banner_upload";
 import type { UploadFile } from "antd";
-import { HeadlineInput, DetailInput } from "../ui/text_input";
+import { HeadlineInput } from "../ui/text_input";
 import NoExpirationCheckbox from "../ui/checkbox";
 import BannerToggle from "../ui/switch";
 import ActionButton from "../ui/actionbutton";
 //import UniversalDialog from "../components/ui/dialog";
 import RadioGroup from '../ui/radio_botton';
-
+import { Editor } from 'primereact/editor';
+import { CategoryDropdown, type CategoryValue } from "../ui/dropdown";
 
 function AddNews() {
   // const [startDate, setStartDate] = useState<dayjs.Dayjs | null>(
@@ -22,6 +23,10 @@ function AddNews() {
   };
   const [noExpire, setNoExpire] = useState(false);
   const [isBannerActive, setIsBannerActive] = useState(false);
+  const [text, setText] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<CategoryValue>('general');
+
+
 
   //  const [showAdd, setShowAdd] = useState(false);
   //   const [showDelete, setShowDelete] = useState(false);
@@ -36,27 +41,33 @@ function AddNews() {
   return (
     <div className="space-y-6">
       <h1 className="text-xl font-semibold mb-4">Add News</h1>
-      <div className="flex flex-col md:flex-row md:items-stretch md:min-h-[280px] md:space-x-4 space-y-4 md:space-y-0">
-        <div className="md:basis-2/5 w-full h-full">
-          <UploadBanner
-            required={true}
-            onFileChange={handleFileChange}
-            maxSize={5}
+
+      <div className="md:basis-2/5 w-full h-full">
+        <UploadBanner
+          required={true}
+          onFileChange={handleFileChange}
+          maxSize={5}
+        />
+      </div>
+      <div className="">
+        <RadioGroup required />
+      </div>
+      <div className="flex flex-col md:flex-row md:items-stretch md:space-x-4 space-y-4 md:space-y-0">
+        <div className="md:basis-2/6 w-full space-y-4">
+          <CategoryDropdown
+            value={selectedCategory}
+            onChange={setSelectedCategory}
           />
         </div>
-
-        <div className="md:basis-3/5 w-full space-y-4">
+        <div className="md:basis-4/6 w-full h-full">
           <HeadlineInput />
-          <DetailInput />
         </div>
       </div>
-      <NoExpirationCheckbox
-        checked={noExpire}
-        onChange={(value) => setNoExpire(value)}
-      />
-      <div className="p-2 mt-4">
-      <RadioGroup required />
-    </div>
+
+      <div className="card">
+        <Editor value={text} onTextChange={(e) => setText(e.htmlValue ?? '')} style={{ height: '520px' }} />
+      </div>
+      
       {/* <div className="mt-4  flex justify-between">
         <DateInput
           label="Start date"
@@ -90,7 +101,7 @@ function AddNews() {
           onChange={(val) => setIsBannerActive(val)}
           showLabel={true} // เปลี่ยนเป็น false หากไม่ต้องการแสดงข้อความ
         />
-        <div className="mt-4 flex justify-end gap-5 ">
+        <div className="mt-16 flex justify-end gap-5 ">
           <div className="">
             <ActionButton
               type="cancel"

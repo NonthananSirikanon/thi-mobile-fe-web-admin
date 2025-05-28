@@ -7,7 +7,6 @@ import { AntTable, type TableModel } from '../components/ui/table';
 
 
 function NewsPage() {
-  const [isActive, setIsActive] = useState(true);
   //const [data, setData] = useState(dummyData);
 const demoData: TableModel = {
   header: ['Position', 'Status', 'Banner', 'URL', 'Created By', 'Edited By', 'Start Date', 'End Date', 'Duration', 'Publish Date', 'Actions'],
@@ -34,7 +33,7 @@ const demoData: TableModel = {
     
       <div className="space-y-6">
           <div className="">
-            <StatusToggle checked={isActive} onChange={setIsActive} />
+            Add news
           </div>
           
           <div className="flex flex-wrap gap-4 justify-end">
