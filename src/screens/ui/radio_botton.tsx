@@ -35,7 +35,7 @@ const RadioGroup: React.FC<RadioGroupProps> = ({
   return (
     <div className="w-full">
       {label && <div className="mb-2 text-gray-700 font-medium">{label}</div>}
-      <div className="flex gap-6 px-3 py-2">
+      <div className="flex gap-6">
         {options.map((option) => (
           <label key={option.value} className="inline-flex items-center gap-2 cursor-pointer">
             <input

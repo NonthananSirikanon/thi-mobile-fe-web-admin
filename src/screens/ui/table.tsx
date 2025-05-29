@@ -1,6 +1,6 @@
 import React, { useState, useContext, useMemo } from 'react';
-import { Table, Switch, Button, Image, Dropdown, } from 'antd';
-import { HolderOutlined, MoreOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import { Table, Switch, Button, Image, Dropdown, Modal, } from 'antd';
+import { HolderOutlined, MoreOutlined, EditOutlined, DeleteOutlined, EyeOutlined } from '@ant-design/icons';
 import type { DragEndEvent } from '@dnd-kit/core';
 import { DndContext } from '@dnd-kit/core';
 import type { SyntheticListenerMap } from '@dnd-kit/core/dist/hooks/utilities';
@@ -111,18 +111,24 @@ interface ActionsDropdownProps {
   onDelete: (record: DataType) => void;
 }
 
-const ActionsDropdown: React.FC<ActionsDropdownProps> = ({ record, onEdit, onDelete }) => {
+const ActionsDropdown: React.FC<ActionsDropdownProps & { onPreview: (record: DataType) => void }> = ({ record, onEdit, onDelete, onPreview }) => {
   const menuItems = [
+    {
+      key: 'preview',
+      icon: <EyeOutlined />,
+      label: 'Preview',
+      onClick: () => onPreview(record),
+    },
     {
       key: 'edit',
       icon: <EditOutlined />,
-      label: 'แก้ไข',
+      label: 'Edit',
       onClick: () => onEdit(record),
     },
     {
       key: 'delete',
       icon: <DeleteOutlined />,
-      label: 'ลบ',
+      label: 'Delete',
       onClick: () => onDelete(record),
       danger: true,
     },
@@ -144,8 +150,17 @@ const ActionsDropdown: React.FC<ActionsDropdownProps> = ({ record, onEdit, onDel
   );
 };
 
+
 // ============ MAIN TABLE COMPONENT ============
 export const AntTable: React.FC<Omit<TableModel, 'header'>> = ({ body }) => {
+const [previewImageUrl, setPreviewImageUrl] = useState<string | undefined>(undefined);
+const [isPreviewVisible, setIsPreviewVisible] = useState(false);
+
+const handlePreview = (record: DataType) => {
+  setPreviewImageUrl(record.banner);
+  setIsPreviewVisible(true);
+};
+
   // Transform data from TableDataModel to DataType
   const [dataSource, setDataSource] = useState<DataType[]>(() => 
     body.data.map((item, index) => ({
@@ -344,6 +359,7 @@ export const AntTable: React.FC<Omit<TableModel, 'header'>> = ({ body }) => {
       render: (_, record) => (
         <ActionsDropdown
           record={record}
+          onPreview={handlePreview}
           onEdit={handleEdit}
           onDelete={handleDelete}
         />
@@ -352,34 +368,79 @@ export const AntTable: React.FC<Omit<TableModel, 'header'>> = ({ body }) => {
   ];
 
   return (
-    <div className="bg-white shadow-sm rounded-lg overflow-hidden">
-      <DndContext modifiers={[restrictToVerticalAxis]} onDragEnd={onDragEnd}>
-        <SortableContext
-          items={dataSource.map((i) => i.key)}
-          strategy={verticalListSortingStrategy}
-        >
-          <Table<DataType>
-            rowKey="key"
-            components={{
-              body: {
-                row: Row,
-              },
-            }}
-            columns={columns}
-            dataSource={dataSource}
-            pagination={false}
-            size="middle"
-            scroll={{ x: 'max-content' }}
-            style={{
-              '--ant-table-header-bg': '#fafafa',
-              '--ant-table-header-color': '#8c8c8c',
-              '--ant-table-header-font-size': '12px',
-              '--ant-table-header-font-weight': '600',
-            } as React.CSSProperties}
-            className="[&_.ant-table-thead>tr>th]:bg-gray-50 [&_.ant-table-thead>tr>th]:text-gray-500 [&_.ant-table-thead>tr>th]:font-semibold [&_.ant-table-thead>tr>th]:text-xs [&_.ant-table-thead>tr>th]:uppercase [&_.ant-table-thead>tr>th]:tracking-wide [&_.ant-table-tbody>tr:hover>td]:bg-gray-50"
-          />
-        </SortableContext>
-      </DndContext>
+  <div className="bg-white shadow-sm rounded-lg overflow-hidden">
+    <DndContext modifiers={[restrictToVerticalAxis]} onDragEnd={onDragEnd}>
+      <SortableContext
+        items={dataSource.map((i) => i.key)}
+        strategy={verticalListSortingStrategy}
+      >
+        <Table<DataType>
+          rowKey="key"
+          components={{ body: { row: Row } }}
+          columns={columns}
+          dataSource={dataSource}
+          pagination={false}
+          size="middle"
+          scroll={{ x: 'max-content' }}
+          style={{
+            '--ant-table-header-bg': '#fafafa',
+            '--ant-table-header-color': '#8c8c8c',
+            '--ant-table-header-font-size': '12px',
+            '--ant-table-header-font-weight': '600',
+          } as React.CSSProperties}
+          className="[&_.ant-table-thead>tr>th]:bg-gray-50 [&_.ant-table-thead>tr>th]:text-gray-500 [&_.ant-table-thead>tr>th]:font-semibold [&_.ant-table-thead>tr>th]:text-xs [&_.ant-table-thead>tr>th]:uppercase [&_.ant-table-thead>tr>th]:tracking-wide [&_.ant-table-tbody>tr:hover>td]:bg-gray-50"
+        />
+      </SortableContext>
+    </DndContext>
+
+    <Modal
+  open={isPreviewVisible}
+  footer={null}
+  onCancel={() => setIsPreviewVisible(false)}
+  centered
+>
+  <div style={{ position: 'relative' }}>
+    <div
+      style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        backgroundColor: 'rgba(0,0,0,0.6)',
+        color: 'white',
+        padding: '4px 8px',
+        fontSize: '12px',
+        borderBottomRightRadius: '6px',
+        zIndex: 1,
+      }}
+    >
+      Preview
     </div>
-  );
+
+    {previewImageUrl ? (
+      <Image
+        src={previewImageUrl}
+        alt="Preview"
+        width="100%"
+        style={{ maxHeight: '70vh', objectFit: 'contain' }}
+      />
+    ) : (
+      <div
+        style={{
+          height: '200px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '16px',
+          color: '#999',
+          backgroundColor: '#f5f5f5',
+          borderRadius: '4px',
+        }}
+      >
+        ไม่มีรูป
+      </div>
+    )}
+  </div>
+</Modal>
+  </div>
+);
 };
