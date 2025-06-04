@@ -57,10 +57,10 @@ interface DataType {
   url: string;
   createdBy: string;
   editedBy: string;
-  startDate: string;
-  startTime: string;
-  endDate: string;
-  endTime: string;
+  createdAt: string;
+  createdTime: string;
+  updateAt: string;
+  updateTime: string;
   duration: string;
   publishDate: string;
   publishTime: string;
@@ -156,10 +156,10 @@ export const AntTable: React.FC<Omit<TableModel, 'header'>> = ({ body }) => {
       url: item.text[3] || '-',
       createdBy: item.text[4] || 'Text',
       editedBy: item.text[5] || 'Text',
-      startDate: item.text[6]?.split(' ')[0] || '31/08/2022',
-      startTime: item.text[6]?.split(' ')[1] || '20:00',
-      endDate: item.text[7]?.split(' ')[0] || '31/08/2022',
-      endTime: item.text[7]?.split(' ')[1] || '20:00',
+      createdAt: item.text[6]?.split(' ')[0] || '31/08/2022',
+      createdTime: item.text[6]?.split(' ')[1] || '20:00',
+      updateAt: item.text[7]?.split(' ')[0] || '31/08/2022',
+      updateTime: item.text[7]?.split(' ')[1] || '20:00',
       duration: item.text[8] || '5(s)',
       publishDate: item.text[9]?.split(' ')[0] || '31/12/2024',
       publishTime: item.text[9]?.split(' ')[1] || '20:00',
@@ -230,7 +230,7 @@ export const AntTable: React.FC<Omit<TableModel, 'header'>> = ({ body }) => {
       title: 'BANNER',
       dataIndex: 'banner',
       key: 'banner',
-      width: 120,
+      width: 100,
       align: 'center',
       render: (banner?: string) => (
         <div className="flex justify-center">
@@ -257,7 +257,7 @@ export const AntTable: React.FC<Omit<TableModel, 'header'>> = ({ body }) => {
       title: 'URL',
       dataIndex: 'url',
       key: 'url',
-      width: 200,
+      width: 100,
       render: (url: string) => {
         if (url === '-') {
           return <span className="text-gray-400">-</span>;
@@ -279,39 +279,41 @@ export const AntTable: React.FC<Omit<TableModel, 'header'>> = ({ body }) => {
       title: 'CREATED BY',
       dataIndex: 'createdBy',
       key: 'createdBy',
-      width: 120,
+      width: 100,
       render: (text: string) => (
         <span className="text-gray-900">{text}</span>
       ),
     },
     {
-      title: 'EDITED BY',
-      dataIndex: 'editedBy',
-      key: 'editedBy',
-      width: 120,
+      title: 'Last Edited By',
+      dataIndex: 'lasteditedby',
+      key: 'lasteditedby',
+      width: 100,
       render: (text: string) => (
         <span className="text-gray-900">{text}</span>
       ),
     },
     {
-      title: 'START DATE- START TIME',
-      key: 'startDateTime',
-      width: 150,
+      title: 'Created At',
+      dataIndex: 'createdat',
+      key: 'createdat',
+      width: 100,
       render: (_, record) => (
         <div className="text-center">
-          <div className="text-gray-900 font-medium">{record.startDate}</div>
-          <div className="text-gray-500 text-sm">{record.startTime}</div>
+          <div className="text-gray-900 font-medium">{record.createdAt  }</div>
+          <div className="text-gray-500 text-sm">{record.createdTime}</div>
         </div>
       ),
     },
     {
-      title: 'END DATE - END TIME',
-      key: 'endDateTime',
-      width: 150,
+      title: 'Update At',
+      dataIndex: 'updatedat',
+      key: 'updatedat',
+      width: 100,
       render: (_, record) => (
         <div className="text-center">
-          <div className="text-gray-900 font-medium">{record.endDate}</div>
-          <div className="text-gray-500 text-sm">{record.endTime}</div>
+          <div className="text-gray-900 font-medium">{record.updateAt}</div>
+          <div className="text-gray-500 text-sm">{record.updateTime}</div>
         </div>
       ),
     },
@@ -328,7 +330,7 @@ export const AntTable: React.FC<Omit<TableModel, 'header'>> = ({ body }) => {
     {
       title: 'PUBLISH',
       key: 'publishDateTime',
-      width: 130,
+      width: 100,
       render: (_, record) => (
         <div className="text-center">
           <div className="text-gray-900 font-medium">{record.publishDate}</div>

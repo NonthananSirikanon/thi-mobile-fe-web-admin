@@ -4,11 +4,20 @@ import StatusToggle from './components/ui/statustoggle';
 import ActionButton from './components/ui/actionbutton';
 import { Link } from 'react-router-dom';
 import { AntTable, type TableModel } from './components/ui/table';
+import SearchInput from './components/ui/search_input';
 
 
 function App() {
   const [isActive, setIsActive] = useState(true);
   //const [data, setData] = useState(dummyData);
+
+  // const [searchText, setSearchText] = useState("");
+
+  const handleSearch = (value: string) => {
+    console.log("ค้นหา:", value);
+    // setSearchText(value);
+  };
+
 const demoData: TableModel = {
   header: ['Position', 'Status', 'Banner', 'URL', 'Created By', 'Edited By', 'Start Date', 'End Date', 'Duration', 'Publish Date', 'Actions'],
   body: {
@@ -33,11 +42,10 @@ const demoData: TableModel = {
   return (
     
       <div className="space-y-6">
-          <div className="">
-            <StatusToggle checked={isActive} onChange={setIsActive} />
-          </div>
-          
+
           <div className="flex flex-wrap gap-4 justify-end">
+            <StatusToggle checked={isActive} onChange={setIsActive} />
+            <SearchInput onSearch={handleSearch} />  
             <Link to="/addbanner">
               <ActionButton 
                 type="addBanner" 
