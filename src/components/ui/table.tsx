@@ -146,7 +146,7 @@ const ActionsDropdown: React.FC<ActionsDropdownProps> = ({ record, onEdit, onDel
 
 // ============ MAIN TABLE COMPONENT ============
 export const AntTable: React.FC<Omit<TableModel, 'header'>> = ({ body }) => {
-  // Transform data from TableDataModel to DataType
+
   const [dataSource, setDataSource] = useState<DataType[]>(() => 
     body.data.map((item, index) => ({
       key: `row-${index}`,
@@ -177,16 +177,16 @@ export const AntTable: React.FC<Omit<TableModel, 'header'>> = ({ body }) => {
 
   const handleEdit = (record: DataType) => {
     console.log('Edit record:', record);
-    // เรียก function เดิมถ้ามี
+    
     if (record.onAction) {
       record.onAction();
     }
-    // เพิ่ม logic สำหรับแก้ไขตรงนี้
+   
   };
 
   const handleDelete = (record: DataType) => {
     console.log('Delete record:', record);
-    // เพิ่ม logic สำหรับลบตรงนี้
+
     setDataSource(prev => prev.filter(item => item.key !== record.key));
   };
 
