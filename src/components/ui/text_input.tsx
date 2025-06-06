@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Input } from 'antd';
 
 interface URLInputProps {
@@ -16,25 +15,44 @@ export const URLInput: React.FC<URLInputProps> = ({
   label = 'URL'
 }) => {
   const [value, setValue] = useState(initialValue);
+  const [error, setError] = useState(false);
 
+  // ตรวจ URL ด้วย regex
+  const validateURL = (url: string) => {
+    return /^https?:\/\/[\w.-]+\.[a-z]{2,}(\/.*)?$/i.test(url);
+  };
+
+  // ตรวจแบบไดนามิกเมื่อพิมพ์
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
     setValue(newValue);
-    if (onChange) {
-      onChange(newValue);
-    }
+    const isValid = validateURL(newValue);
+    setError(!isValid);
+    if (onChange) onChange(newValue);
   };
+
+  // ตรวจค่าที่รับมาตอนเริ่มต้น
+  useEffect(() => {
+    if (initialValue) {
+      setError(!validateURL(initialValue));
+    }
+  }, [initialValue]);
 
   return (
     <div className="w-full">
-      <div className="mb-2 text-gray-700 font-medium">{label}</div>
+      {label && <label className="mb-1 block text-gray-700 font-medium">{label}</label>}
       <Input
         value={value}
         onChange={handleChange}
         placeholder={placeholder}
-        style={{ height: 52 }}
-        className="rounded border border-gray-300 w-full p-2"
+        className={`h-[52px] ${error ? 'border-red-500' : 'border-gray-300'}`}
+        status={error ? 'error' : undefined}
       />
+      {error && (
+        <div className="mt-1 text-sm text-red-500">
+          The URL entered is not in the correct format. Please ensure it begins with 'http://' or 'https://' and try again.
+        </div>
+      )}
     </div>
   );
 };
