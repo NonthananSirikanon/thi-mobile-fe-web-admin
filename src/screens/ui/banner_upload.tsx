@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, CloudUpload } from 'lucide-react';
 
 interface UploadBannerProps {
@@ -7,6 +7,7 @@ interface UploadBannerProps {
   maxSize?: number;
   onFileChange?: (fileList: File[]) => void;
   supportedFormats?: string[];
+  initialFile?: File | null;
 }
 
 export default function UploadBanner({
@@ -14,12 +15,36 @@ export default function UploadBanner({
   required = false,
   maxSize = 10,
   onFileChange,
-  supportedFormats = ['jpeg', 'jpg', 'png', 'svg']
-}: UploadBannerProps) {
-  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  supportedFormats = ['jpeg', 'jpg', 'png', 'svg'],
+  initialFile = null,
+  ...rest
+}: UploadBannerProps & { onChange?: (fileList: File[]) => void }) {
+  const [uploadedFile, setUploadedFile] = useState<File | null>(initialFile);
   const [imageUrl, setImageUrl] = useState<string>('');
-  const [dimensions, setDimensions] = useState<{width: number, height: number} | null>(null);
+  const [dimensions, setDimensions] = useState<{ width: number; height: number } | null>(null);
   const [dragActive, setDragActive] = useState(false);
+
+  useEffect(() => {
+    if (!initialFile) return;
+
+    // โหลดไฟล์จาก initialFile เมื่อ props ถูกตั้งค่า
+    const url = URL.createObjectURL(initialFile);
+    setImageUrl(url);
+    setUploadedFile(initialFile);
+
+    // โหลดขนาดของภาพ
+    const img = new Image();
+    img.onload = () => {
+      setDimensions({ width: img.width, height: img.height });
+    };
+    img.src = url;
+
+    return () => {
+      if (imageUrl) {
+        URL.revokeObjectURL(imageUrl); // เคลียร์ URL ที่สร้างขึ้นเมื่อเปลี่ยนไฟล์
+      }
+    };
+  }, [initialFile]);
 
   const formatFileSize = (bytes: number): string => {
     if (bytes === 0) return '0 Bytes';
@@ -52,24 +77,19 @@ export default function UploadBanner({
 
     return true;
   };
-
-  const handleFile = (file: File) => {
+  
+  const handleFile = async (file: File) => {
     if (!validateFile(file)) return;
 
     const url = URL.createObjectURL(file);
     setImageUrl(url);
     setUploadedFile(file);
 
-    if (file.type.startsWith('image/')) {
-      const img = new Image();
-      img.onload = () => {
-        setDimensions({ width: img.naturalWidth, height: img.naturalHeight });
-      };
-      img.src = url;
-    }
-
     if (onFileChange) {
       onFileChange([file]);
+    }
+    if (rest.onChange) {
+      rest.onChange([file]);
     }
   };
 
@@ -100,17 +120,52 @@ export default function UploadBanner({
     }
   };
 
-  const removeFile = () => {
-    if (imageUrl) {
-      URL.revokeObjectURL(imageUrl);
-    }
-    setUploadedFile(null);
-    setImageUrl('');
-    setDimensions(null);
-    if (onFileChange) {
-      onFileChange([]);
-    }
+  const deleteFromIndexedDB = (key: string) => {
+  const request = indexedDB.open('MyDB', 1);
+  request.onsuccess = () => {
+    const db = request.result;
+    const tx = db.transaction('images', 'readwrite');
+    const store = tx.objectStore('images');
+    store.delete(key);
+    tx.oncomplete = () => db.close();
   };
+};
+
+
+  const removeFile = () => {
+  if (imageUrl) {
+    URL.revokeObjectURL(imageUrl);
+  }
+  deleteFromIndexedDB('news-image');
+  setUploadedFile(null);
+  setImageUrl('');
+  setDimensions(null);
+  if (onFileChange) {
+    onFileChange([]);
+  }
+};
+
+  const loadJsonFromIndexedDB = (key: string): Promise<any | null> => {
+    return new Promise((resolve, reject) => {
+      const request = indexedDB.open('MyDB', 1);
+
+      request.onsuccess = () => {
+        const db = request.result;
+        const tx = db.transaction('images', 'readonly');
+        const store = tx.objectStore('images');
+        const getRequest = store.get(key);
+
+        getRequest.onsuccess = () => {
+          resolve(getRequest.result?.data || null);
+          db.close();
+        };
+        getRequest.onerror = () => reject(getRequest.error);
+      };
+
+      request.onerror = () => reject(request.error);
+    });
+  };
+
 
   return (
     // **** Container หลัก: จัดกึ่งกลางทั้งแนวตั้งและแนวนอน ****
@@ -125,11 +180,10 @@ export default function UploadBanner({
 
         {/* กล่องอัปโหลด */}
         <div
-          className={`h-80 w-130 relative border-2 border-dashed rounded-lg overflow-hidden transition-colors ${
-            dragActive
-              ? 'border-blue-400 bg-blue-50'
-              : 'border-gray-300 hover:border-gray-400'
-          }`}
+          className={`h-80 w-130 relative border-2 border-dashed rounded-lg overflow-hidden transition-colors ${dragActive
+            ? 'border-blue-400 bg-blue-50'
+            : 'border-gray-300 hover:border-gray-400'
+            }`}
           onDragEnter={handleDrag}
           onDragLeave={handleDrag}
           onDragOver={handleDrag}
