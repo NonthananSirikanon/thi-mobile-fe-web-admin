@@ -15,6 +15,7 @@ function AppRouter() {
         <Route path="/addbanner" element={<AddBanner />} />
         <Route path="/news" element={<NewsPage />} />
         <Route path="/addnews" element={<AddNews />} />
+        <Route path="/addNews/:id" element={<AddNews />} />
       </Routes>
     </Layout>
   )

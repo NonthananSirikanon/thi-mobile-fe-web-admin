@@ -1,15 +1,16 @@
-import React, { useState } from 'react';
+import React from 'react';
 
 interface RadioOption {
   label: string;
   value: string;
+  required?: boolean;
 }
 
 interface RadioGroupProps {
   name?: string;
   required?: boolean;
   options?: RadioOption[];
-  defaultValue?: string;
+  value?: string; // <-- แทน defaultValue
   onChange?: (value: string) => void;
   label?: string;
 }
@@ -21,28 +22,25 @@ const RadioGroup: React.FC<RadioGroupProps> = ({
     { label: 'Hot News', value: 'HotNews' },
     { label: 'Feature News', value: 'FeatureNews' },
   ],
-  defaultValue = '',
+  value = '', // ← ใช้จาก parent component
   onChange,
   label = 'Topic',
 }) => {
-  const [selected, setSelected] = useState(defaultValue);
-
-  const handleChange = (value: string) => {
-    setSelected(value);
-    if (onChange) onChange(value);
+  const handleChange = (val: string) => {
+    if (onChange) onChange(val);
   };
 
   return (
     <div className="w-full">
       {label && <div className="mb-2 text-gray-700 font-medium">{label}</div>}
-      <div className="flex gap-6 px-3 py-2">
+      <div className="flex gap-6">
         {options.map((option) => (
           <label key={option.value} className="inline-flex items-center gap-2 cursor-pointer">
             <input
               type="radio"
               name={name}
               value={option.value}
-              checked={selected === option.value}
+              checked={value === option.value} // ← ควบคุมจาก props.value
               onChange={() => handleChange(option.value)}
               required={required}
               className="form-radio text-blue-600 w-4 h-4"
