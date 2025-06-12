@@ -16,6 +16,7 @@ const ThailandHeadline = ({ collapsed }: ThailandHeadlineProps) => {
   const menuItems = [
     { to: "/", label: "Banner" },
     { to: "/news", label: "News" },
+    { to: "/magazine", label: "Magazine" },
   ];
 
   return collapsed ? (

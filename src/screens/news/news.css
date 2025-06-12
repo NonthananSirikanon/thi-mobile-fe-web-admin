@@ -1,0 +1,5 @@
+@import "tailwindcss";
+
+.custom-modal .ant-modal-content {
+  padding: 40px 30px;
+}
