@@ -1,15 +1,13 @@
 import { useEffect, useState } from "react";
-import UploadBanner from "../ui/banner_upload";
-import { HeadlineInput } from "../ui/text_input";
-import BannerToggle from "../ui/switch";
-import ActionButton from "../ui/actionbutton";
-import RadioGroup from "../ui/radio_botton";
-import { Editor } from "primereact/editor";
-import { CategoryDropdown, type CategoryValue } from "../ui/dropdown";
+import UploadBanner from "./ui/banner_upload";
+import { HeadlineInput } from "./ui/text_input";
+import BannerToggle from "./ui/switch";
+import ActionButton from "./ui/actionbutton";
+import { CategoryDropdown, type CategoryValue } from "./ui/dropdown";
 import { useNavigate } from "react-router-dom";
 import { useParams } from 'react-router-dom';
 
-function AddNews() {
+function AddMagazine() {
   const { id } = useParams();
   const [headline, setHeadline] = useState('');
   const [isBannerActive, setIsBannerActive] = useState(false);
@@ -19,104 +17,10 @@ function AddNews() {
   const DB_VERSION = 2;
   const [newsType, setNewsType] = useState<string>("");
 
-  useEffect(() => {
-  if (id) {
-    const loadNewsDraft = async () => {
-      const db = await openDB();
-      const tx = db.transaction("news-drafts", "readonly");
-      const store = tx.objectStore("news-drafts");
-      const request = store.get(Number(id)); 
-
-      request.onsuccess = () => {
-        const data = request.result;
-        if (data) {
-          setHeadline(data.headline);
-          setCategory(data.category);
-          setText(data.text);
-          setIsBannerActive(data.isBannerActive);
-          setNewsType(data.newsType);
-
-          if (data.bannerFile) {
-            fetch(data.bannerFile)
-              .then(res => res.blob())
-              .then(blob => {
-                const file = new File([blob], "banner.jpg", { type: "image/jpeg" });
-                setBannerFile(file);
-              });
-          }
-        }
-        db.close();
-      };
-    };
-
-    loadNewsDraft();
-  }
-}, [id]);
-
-
-  useEffect(() => {
-    const openDBAndLoadImage = () => {
-      const request = indexedDB.open('MyDB', DB_VERSION);
-
-      request.onupgradeneeded = () => {
-        const db = request.result;
-        if (!db.objectStoreNames.contains("images")) {
-          db.createObjectStore("images", { keyPath: "key" });
-        }
-        if (!db.objectStoreNames.contains("news-drafts")) {
-          db.createObjectStore("news-drafts", { keyPath: "id" });
-        }
-      };
-
-      request.onsuccess = () => {
-        const db = request.result;
-        const tx = db.transaction("images", "readonly");
-        const store = tx.objectStore("images");
-        const getRequest = store.get("news-image");
-
-        getRequest.onsuccess = () => {
-          const data = getRequest.result?.data;
-          if (data?.base64) {
-            fetch(data.base64)
-              .then(res => res.blob())
-              .then(blob => {
-                const file = new File([blob], data.filename, { type: data.type });
-                setBannerFile(file);
-              });
-          }
-        };
-      };
-    };
-
-    openDBAndLoadImage();
-  }, []);
-
-  // แทนที่ saveImageToIndexedDB() และ openDBAndLoadImage() ให้ใช้ openDB()
-  const saveImageToIndexedDB = async (file: File) => {
-    const db = await openDB();
-    const reader = new FileReader();
-    reader.onload = () => {
-      const base64 = reader.result as string;
-      const tx = db.transaction("images", "readwrite");
-      const store = tx.objectStore("images");
-      store.put({
-        key: "news-image",
-        data: {
-          base64,
-          filename: file.name,
-          type: file.type,
-        },
-      });
-      tx.oncomplete = () => db.close();
-    };
-    reader.readAsDataURL(file);
-  };
-
   const handleFileChange = (files: File[]) => {
     if (files.length > 0) {
       const file = files[0];
       setBannerFile(file);
-      saveImageToIndexedDB(file); // บันทึกภาพลง IndexedDB
     } else {
       setBannerFile(null);
     }
@@ -258,16 +162,8 @@ function AddNews() {
         />
       </div>
 
-      <div>
-        <RadioGroup
-          required
-          value={newsType}
-          onChange={(value) => setNewsType(value)}
-        />
-      </div>
-
       <div className="flex flex-col md:flex-row md:items-stretch md:space-x-4 space-y-4 md:space-y-0">
-        <div className="md:basis-2/6 w-full space-y-4">
+        <div className="md:basis-3/6 w-full space-y-4">
           <CategoryDropdown
             value={category}
             onChange={setCategory}
@@ -275,20 +171,12 @@ function AddNews() {
             placeholder="News Type"
           />
         </div>
-        <div className="md:basis-4/6 w-full h-full">
+        <div className="md:basis-3/6 w-full h-full">
           <HeadlineInput
             value={headline}
             onChange={(e) => setHeadline(e.target.value)}
           />
         </div>
-      </div>
-
-      <div className="card">
-        <Editor
-          value={text}
-          onTextChange={(e) => setText(e.htmlValue ?? '')}
-          style={{ height: '520px' }}
-        />
       </div>
 
       <div>
@@ -306,4 +194,4 @@ function AddNews() {
   );
 }
 
-export default AddNews;
+export default AddMagazine;

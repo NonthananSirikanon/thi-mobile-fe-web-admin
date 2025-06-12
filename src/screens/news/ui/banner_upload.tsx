@@ -120,23 +120,10 @@ export default function UploadBanner({
     }
   };
 
-  const deleteFromIndexedDB = (key: string) => {
-  const request = indexedDB.open('MyDB', 1);
-  request.onsuccess = () => {
-    const db = request.result;
-    const tx = db.transaction('images', 'readwrite');
-    const store = tx.objectStore('images');
-    store.delete(key);
-    tx.oncomplete = () => db.close();
-  };
-};
-
-
   const removeFile = () => {
   if (imageUrl) {
     URL.revokeObjectURL(imageUrl);
   }
-  deleteFromIndexedDB('news-image');
   setUploadedFile(null);
   setImageUrl('');
   setDimensions(null);
@@ -145,40 +132,13 @@ export default function UploadBanner({
   }
 };
 
-  const loadJsonFromIndexedDB = (key: string): Promise<any | null> => {
-    return new Promise((resolve, reject) => {
-      const request = indexedDB.open('MyDB', 1);
-
-      request.onsuccess = () => {
-        const db = request.result;
-        const tx = db.transaction('images', 'readonly');
-        const store = tx.objectStore('images');
-        const getRequest = store.get(key);
-
-        getRequest.onsuccess = () => {
-          resolve(getRequest.result?.data || null);
-          db.close();
-        };
-        getRequest.onerror = () => reject(getRequest.error);
-      };
-
-      request.onerror = () => reject(request.error);
-    });
-  };
-
-
   return (
-    // **** Container หลัก: จัดกึ่งกลางทั้งแนวตั้งและแนวนอน ****
     <div className="flex justify-center items-center p-4">
-      {/* **** Div ที่ครอบเนื้อหาทั้งหมดของ UploadBanner เพื่อจัดกึ่งกลางตัวเอง **** */}
-      <div className="mx-auto flex flex-col items-center"> {/* เพิ่ม flex-col และ items-center */}
-        {/* ข้อความด้านบน */}
-        <div className="flex items-center mb-2 self-start"> {/* self-start เพื่อให้ชิดซ้ายภายใน flex-col */}
+      <div className="mx-auto flex flex-col items-center">
+        <div className="flex items-center mb-2 self-start"> 
           <p className="text-base font-medium m-0">{title}</p>
           {required && <span className="text-red-500 ml-1">*</span>}
         </div>
-
-        {/* กล่องอัปโหลด */}
         <div
           className={`h-80 w-130 relative border-2 border-dashed rounded-lg overflow-hidden transition-colors ${dragActive
             ? 'border-blue-400 bg-blue-50'
@@ -259,8 +219,7 @@ export default function UploadBanner({
           )}
         </div>
 
-        {/* ข้อความด้านล่าง */}
-        <div className="mt-2 text-sm text-gray-500 self-start"> {/* self-start เพื่อให้ชิดซ้ายภายใน flex-col */}
+        <div className="mt-2 text-sm text-gray-500 self-start"> 
           Only {supportedFormats.join(', ')} are supported.
         </div>
       </div>

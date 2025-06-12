@@ -18,6 +18,7 @@ export interface TableDataModel {
   };
   headline?: string;
   newsType?: string;
+  category?: string;
 }
 
 interface AntTableProps extends Omit<TableModel, 'header'> {
@@ -69,6 +70,7 @@ const toDataType = (item: TableDataModel, index: number): DataType => {
     headline: item.headline ?? '',
     newsType: item.newsType ?? '',
     onAction: item.function.onClick,
+    category: item.category ?? '',
   };
 };
 
@@ -104,6 +106,7 @@ interface DataType {
   onAction?: () => void;
   headline?: string;
   newsType: string;
+  category: string;
 }
 
 
@@ -362,7 +365,7 @@ export const AntTable: React.FC<AntTableProps> = ({ body, onEdit, onDelete }) =>
   const renderPreviewModal = () => {
     if (!previewRecord || !['HotNews', 'FeatureNews'].includes(previewRecord.newsType)) return null;
 
-    if (previewRecord.newsType === 'HotNews') {
+    if (previewRecord.newsType === 'FeatureNews') {
       return (
         <Modal
           open={isPreviewVisible}
@@ -381,7 +384,7 @@ export const AntTable: React.FC<AntTableProps> = ({ body, onEdit, onDelete }) =>
                 left: 0,
                 width: '100%',
                 height: '40%',
-                background: 'linear-gradient(to top, rgba(0, 0, 0, 0.9), transparent)',
+                background: 'linear-gradient(to top, rgba(0, 0, 0, 0.7), transparent)',
                 zIndex: 1,
                 borderBottomLeftRadius: '4px',
                 borderBottomRightRadius: '4px',
@@ -390,11 +393,30 @@ export const AntTable: React.FC<AntTableProps> = ({ body, onEdit, onDelete }) =>
             <div
               style={{
                 position: 'absolute',
+                top: 0,
+                left: 0,
+                color: 'white',
+                backgroundColor: '#FB6323',
+                margin: '10px 0 0 10px',
+                padding: '7px',
+                fontSize: '10px',
+                fontWeight: '500',
+                zIndex: 2,
+                wordWrap: 'break-word',
+                lineHeight: '1.3',
+                borderRadius: '5px',
+              }}
+            >
+              {previewRecord.category ?? 'Header'}
+            </div>
+            <div
+              style={{
+                position: 'absolute',
                 bottom: 0,
                 left: 0,
                 width: '100%',
                 color: 'white',
-                padding: '0 0 10px 15px',
+                padding: '0 0 10px 10px',
                 fontSize: '14px',
                 fontWeight: '500',
                 zIndex: 2,
@@ -440,7 +462,7 @@ export const AntTable: React.FC<AntTableProps> = ({ body, onEdit, onDelete }) =>
     }
 
     // ✅ FeatureNews แบบใหม่
-    if (previewRecord.newsType === 'FeatureNews') {
+    if (previewRecord.newsType === 'HotNews') {
       return (
         <Modal
           open={isPreviewVisible}

@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
-import './news.css';
-import StatusToggle from './ui/statustoggle';
-import ActionButton from './ui/actionbutton';
+import '../news.css';
+import StatusToggle from '../ui/statustoggle';
+import ActionButton from '../ui/actionbutton';
 import { Link } from 'react-router-dom';
-import { AntTable, type TableModel } from './ui/table';
-import SearchMenu from './ui/search_menu';
-import NewsTabSelector from './ui/news_tab';
+import { AntTable, type TableModel } from '../ui/table';
+import SearchMenu from '../ui/search_menu';
+import NewsTabSelector from '../ui/news_tab';
 import { useNavigate } from 'react-router-dom';
 
 
@@ -102,6 +102,7 @@ function NewsPage() {
         headline: item.headline || '',
         textDetail:  item.text || '',
         newsType:  item.newsType || '',
+        category: item.category || '',
         text: [
           (index + 1).toString(),   
           item.isBannerActive?.toString() || '',

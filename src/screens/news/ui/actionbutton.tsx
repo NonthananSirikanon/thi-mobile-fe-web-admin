@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button } from 'antd';
 
-export type ButtonType = 'addBanner' | 'previewAll' | 'publish' | 'cancel' | 'save' | 'canceldialog';
+export type ButtonType = 'addBanner' | 'previewAll' | 'publish' | 'cancel' | 'save' | 'canceldialog' | 'createNewsCategory' | 'saveChangesCategory' | 'createNewsAgency' | 'saveChangesAgency';
 
 type ButtonConfig = {
   label: string;
@@ -52,6 +52,26 @@ const buttonConfigs: Record<ButtonType, ButtonConfig> = {
     width: 104,
     height: 39,
   },
+  createNewsCategory: {
+    label: '+ CREATE NEWS CATEGORY',
+    bgColor: '#2962FF',
+    textColor: '#FFFFFF',
+  },
+  saveChangesCategory: {
+    label: 'SAVE CHANGES',
+    bgColor: '#2E7D32',
+    textColor: '#FFFFFF',
+  },
+  createNewsAgency: {
+    label: '+ CREATE NEWS AGENCY',
+    bgColor: '#2962FF',
+    textColor: '#FFFFFF',
+  },
+  saveChangesAgency: {
+    label: 'SAVE CHANGES',
+    bgColor: '#2E7D32',
+    textColor: '#FFFFFF',
+  },
 };
 
 type ActionButtonProps = {
@@ -60,7 +80,7 @@ type ActionButtonProps = {
 };
 
 const ActionButton: React.FC<ActionButtonProps> = ({ type, onClick }) => {
-  const { label, bgColor, textColor, borderColor, width = 133, height = 37 } = buttonConfigs[type];
+  const { label, bgColor, textColor, borderColor, height = 37 } = buttonConfigs[type];
 
   
   const antType = type === 'cancel' ? 'default' : 'primary';
@@ -69,7 +89,6 @@ const ActionButton: React.FC<ActionButtonProps> = ({ type, onClick }) => {
     <Button
       type={antType}
       style={{
-        width: `${width}px`,
         height: `${height}px`,
         fontSize: '14px',
         backgroundColor: bgColor,
