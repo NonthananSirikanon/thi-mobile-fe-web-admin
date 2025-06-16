@@ -9,10 +9,6 @@ interface DeleteModalProps {
 }
 
 const DeleteModal: React.FC<DeleteModalProps> = ({ open, videoUrl, thumbnailUrl, onClose }) => {
-    useEffect(() => {
-        console.log('url', videoUrl);
-    }
-        , [open, videoUrl]);
     return (
         <>
             <Modal

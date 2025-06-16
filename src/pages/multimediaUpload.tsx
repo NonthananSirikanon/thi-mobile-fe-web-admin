@@ -6,14 +6,14 @@ import BannerToggle from "../components/ui/switch";
 import { useFormik } from "formik";
 import { useVideos } from "../hooks/useMedia";
 import { useParams } from "react-router-dom";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
 
 
 
 const MultimediaTable: React.FC = () => {
     const { key } = useParams<{ key: string }>();
-    const { addVideo, getVideo, loading, error } = useVideos();
+    const { addVideo, getVideo, updateVideo, loading, error } = useVideos();
     const isEditMode = Boolean(key);
     // for forcing re-render of UploadBanner component
     const [resetKey, setResetKey] = useState(0);
@@ -25,7 +25,7 @@ const MultimediaTable: React.FC = () => {
 
     const formik = useFormik({
         initialValues: {
-            thumbnail: null,
+            thumbnail: null as File | null, // Initialize as null
             videoFileName: '',
             videoUrl: '',
             description: '',
@@ -34,39 +34,41 @@ const MultimediaTable: React.FC = () => {
         validate: validateForm,
         onSubmit: async (values, { setSubmitting, resetForm }) => {
             try {
-                // Convert thumbnail file to Blob if it exists
-                if (!values.thumbnail) {
-                    throw new Error('Thumbnail is required');
-                }
                 const thumbnailFile = values.thumbnail as File;
 
-                // Create video data matching the database schema
                 const videoData = {
-                    thumbnail: thumbnailFile, // This should be a Blob
+                    thumbnail: thumbnailFile,
                     status: values.isActive,
                     videoFileName: values.videoFileName,
-                    videoUrl: values.videoUrl, // Using videoUrl as position for now
-                    readingVolume: 0, // Default value
+                    videoUrl: values.videoUrl,
+                    readingVolume: 0,
                     description: values.description,
-                    createdBy: 'current-user', // You should replace this with actual user info
-                    lastEditedBy: 'current-user', // You should replace this with actual user info
+                    createdBy: 'current-user',
+                    lastEditedBy: 'current-user',
                     position: 0,
-                    publish: 'test', // Default value
+                    publish: 'test',
                 };
 
-                await addVideo(videoData);
 
-                message.success('Successful! Video uploaded');
+                if (isEditMode) {
+                    if (!key) {
+                        throw new Error('Key is required for update');
+                    }
 
-                // Reset form on successful submission
-                resetForm();
+                    await updateVideo(key, videoData)
+                    message.success('Successful! Video updated');
+                } else {
 
-                // Reset the UploadBanner component
-                handleReset();
+                    await addVideo(videoData);
 
+                    message.success('Successful! Video uploaded')
 
-                // Show success message
-                console.log('Video uploaded successfully!');
+                    // Reset form on successful submission
+                    resetForm();
+
+                    // Reset the UploadBanner component
+                    handleReset();
+                }
 
             } catch (error) {
                 console.error('Failed to upload video:', error);
@@ -82,9 +84,6 @@ const MultimediaTable: React.FC = () => {
                 try {
                     const videoData = await getVideo(key);
                     if (videoData) {
-
-                        // change thumnail to Blob
-
                         formik.setValues({
                             thumbnail: videoData.thumbnail,
                             videoFileName: videoData.videoFileName || '',
@@ -107,7 +106,6 @@ const MultimediaTable: React.FC = () => {
         <form onSubmit={formik.handleSubmit}>
             <div className="*:mt-4">
 
-                {/* TODO Clear upload file after submit */}
                 <UploadBanner
                     key={resetKey} // Reset key to force re-render
                     id="thumbnail"
@@ -122,6 +120,9 @@ const MultimediaTable: React.FC = () => {
                             formik.setFieldValue('thumbnail', files[0]);
                         }
                     }}
+
+                    initialFile={formik.values.thumbnail} // Pas
+
                 />
                 <div className="flex flex-col gap-4 md:flex-row md:gap-4">
                     <div className="flex-1">
@@ -171,7 +172,7 @@ const MultimediaTable: React.FC = () => {
                         }}
                         disabled={formik.isSubmitting}
                     >
-                        Cancel
+                        {isEditMode ? 'Reset' : 'Clear'}
                     </Button>
                     <Button
                         type="primary"

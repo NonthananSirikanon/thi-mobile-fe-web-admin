@@ -9,6 +9,7 @@ interface UploadBannerProps {
   maxSize?: number;
   onFileChange?: (fileList: File[]) => void;
   supportedFormats?: string[];
+  initialFile?: File | null; // Add this prop
 }
 
 export default function UploadBanner({
@@ -19,6 +20,7 @@ export default function UploadBanner({
   maxSize = 10,
   onFileChange,
   supportedFormats = ["jpeg", "jpg", "png", "svg"],
+  initialFile, // Add this prop
 }: UploadBannerProps) {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [imageUrl, setImageUrl] = useState<string>("");
@@ -42,6 +44,21 @@ export default function UploadBanner({
     return filename.split(".").pop()?.toUpperCase() || "";
   };
 
+  useEffect(() => {
+    if (initialFile && !uploadedFile) {
+      setUploadedFile(initialFile);
+      const url = URL.createObjectURL(initialFile);
+      setImageUrl(url);
+
+      if (initialFile.type.startsWith("image/")) {
+        const img = new Image();
+        img.onload = () => {
+          setDimensions({ width: img.naturalWidth, height: img.naturalHeight });
+        };
+        img.src = url;
+      }
+    }
+  }, [initialFile, uploadedFile]);
   const validateFile = (file: File): boolean => {
     const isValidFormat = supportedFormats.some(
       (format) =>
@@ -66,8 +83,10 @@ export default function UploadBanner({
     return true;
   };
 
+
   const handleFile = (file: File) => {
     if (!validateFile(file)) return;
+
 
     const url = URL.createObjectURL(file);
     setImageUrl(url);
@@ -151,6 +170,7 @@ export default function UploadBanner({
           name={name}
           type="file"
           accept={supportedFormats.map((format) => `image/${format}`).join(",")}
+
           onChange={handleChange}
           className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
         />

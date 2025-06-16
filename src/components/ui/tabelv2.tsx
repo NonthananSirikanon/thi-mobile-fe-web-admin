@@ -81,32 +81,32 @@ const Row: React.FC<RowProps> = (props) => {
 };
 
 const initialData: DataType[] = [
-    {
-        id: '0',
-        frontendId: '2',
-        videoFileName: 'John Bwn',
-        status: true,
-        thumbnail: 'https://dummyimage.com/600x400/000/fff',
-        readingVolume: 120,
-        createdBy: 'Alice',
-        lastEditedBy: 'Bob',
-        createdAt: '2024-06-01 10:00',
-        updatedAt: '2024-06-10 15:30',
-        publish: '2024-06-12 09:00',
-    },
-    {
-        id: '0',
-        frontendId: '1',
-        videoFileName: 'John Brown',
-        status: false,
-        thumbnail: 'https://dummyimage.com/600x400/000/fff',
-        readingVolume: 120,
-        createdBy: 'Alice',
-        lastEditedBy: 'Bob',
-        createdAt: '2024-06-01 10:00',
-        updatedAt: '2024-06-10 15:30',
-        publish: '2024-06-12 09:00',
-    },
+    // {
+    //     id: '0',
+    //     frontendId: '2',
+    //     videoFileName: 'John Bwn',
+    //     status: true,
+    //     thumbnail: null,
+    //     readingVolume: 120,
+    //     createdBy: 'Alice',
+    //     lastEditedBy: 'Bob',
+    //     createdAt: '2024-06-01 10:00',
+    //     updatedAt: '2024-06-10 15:30',
+    //     publish: '2024-06-12 09:00',
+    // },
+    // {
+    //     id: '0',
+    //     frontendId: '1',
+    //     videoFileName: 'John Brown',
+    //     status: false,
+    //     thumbnail: null,
+    //     readingVolume: 120,
+    //     createdBy: 'Alice',
+    //     lastEditedBy: 'Bob',
+    //     createdAt: '2024-06-01 10:00',
+    //     updatedAt: '2024-06-10 15:30',
+    //     publish: '2024-06-12 09:00',
+    // },
 ];
 
 interface MultimediaTableProps {
@@ -192,7 +192,7 @@ export const MultimediaTable: React.FC<MultimediaTableProps> = ({ isPublic }) =>
             }
         },
         { title: 'Video File Name', dataIndex: 'videoFileName' },
-        { title: 'Reading Volume', dataIndex: 'readingVolume' },
+        !isPublic ? { title: 'Reading Volume', dataIndex: 'readingVolume' } : {},
         { title: 'Created By', dataIndex: 'createdBy' },
         { title: 'Last Edited By', dataIndex: 'lastEditedBy' },
         {
@@ -219,10 +219,13 @@ export const MultimediaTable: React.FC<MultimediaTableProps> = ({ isPublic }) =>
                 <ActionsDropdown
                     onDelete={() => {
                         let thumb = record.thumbnail;
+                        let thumbUrl: string | undefined | null;
                         if (thumb instanceof Blob) {
-                            thumb = URL.createObjectURL(thumb);
+                            thumbUrl = URL.createObjectURL(thumb);
+                        } else {
+                            thumbUrl = thumb;
                         }
-                        setSelectedThumbnail(thumb);
+                        setSelectedThumbnail(thumbUrl ?? undefined);
                         setDeleteKey(record.frontendId);
                         setModalOpen(true);
                     }}
@@ -231,10 +234,13 @@ export const MultimediaTable: React.FC<MultimediaTableProps> = ({ isPublic }) =>
                     }}
                     onPreview={() => {
                         let thumb = record.thumbnail;
+                        let thumbUrl: string | undefined | null;
                         if (thumb instanceof Blob) {
-                            thumb = URL.createObjectURL(thumb);
+                            thumbUrl = URL.createObjectURL(thumb);
+                        } else {
+                            thumbUrl = thumb;
                         }
-                        setSelectedThumbnail(thumb);
+                        setSelectedThumbnail(thumbUrl ?? undefined);
                         setSelectedVideo(record.videoUrl);
                         setVideoModalOpen(true);
                     }}

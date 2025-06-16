@@ -5,7 +5,7 @@ export interface Media {
   id: string;
   status: boolean;
   videoFileName: string;
-  thumbnail: File | any;
+  thumbnail: File;
   readingVolume: number;
   videoUrl?: string;
   createdBy: string;
