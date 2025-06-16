@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { X, CloudUpload } from "lucide-react";
 
 interface UploadBannerProps {
@@ -125,6 +125,7 @@ export default function UploadBanner({
       onFileChange([]);
     }
   };
+
 
   return (
     <div className="w-full">

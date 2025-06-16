@@ -3,7 +3,7 @@ import type { MediaDB } from './idbType';
 
 
 const DB_NAME = 'MultimediaDB';
-const DB_VERSION = 4;
+const DB_VERSION = 8;
 
 
 let dbInstance: IDBPDatabase<MediaDB> | null = null;
@@ -18,7 +18,7 @@ export const getDB = async (): Promise<IDBPDatabase<MediaDB>> => {
 
       if (!db.objectStoreNames.contains('media')) {
         const multimedia = db.createObjectStore('media', {
-          keyPath: 'key',
+          keyPath: 'frontendId',
         });
       }
     

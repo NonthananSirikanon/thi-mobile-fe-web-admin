@@ -19,6 +19,24 @@ export const useVideos = () => {
         }
     }, []);
 
+
+    const getVideo = useCallback(async (id: string) => {
+        try {
+            setLoading(true);
+            setError(null);
+            const video = await VideoService.getVideo(id);
+            if (!video) {
+                throw new Error(`Video with id ${id} not found`);
+            }
+            return video;
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to load video');
+            throw err;
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
     const addVideo = useCallback(async (videoData: Parameters<typeof VideoService.createVideo>[0]) => {
         try {
             await VideoService.createVideo(videoData);
@@ -57,6 +75,7 @@ export const useVideos = () => {
         videos,
         loading,
         error,
+        getVideo,
         addVideo,
         updateVideo,
         deleteVideo,

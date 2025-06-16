@@ -1,60 +1,27 @@
-import { Button } from "antd";
+import { Button, message } from "antd";
 import UploadBanner from "../components/ui/banner_upload";
 import TextAreaInput from "../components/ui/textArea";
 import TextInput from "../components/ui/textInput";
 import BannerToggle from "../components/ui/switch";
 import { useFormik } from "formik";
 import { useVideos } from "../hooks/useMedia";
+import { useParams } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
 
-type FormValues = {
-    thumbnail: File | null;
-    videoFileName: string;
-    videoUrl: string;
-    description: string;
-    isActive: boolean;
-};
 
-const validateForm = (values: FormValues) => {
-    const errors: Partial<Record<keyof FormValues, string>> = {};
 
-    // Thumbnail validation
-    if (!values.thumbnail) {
-        errors.thumbnail = 'Thumbnail is required';
-    }
-
-    // Video file name validation
-    if (!values.videoFileName) {
-        errors.videoFileName = 'Required';
-    } else if (!/^[\w\s\-\.\u4e00-\u9fff\u0e00-\u0e7f]{1,100}$/.test(values.videoFileName)) {
-        errors.videoFileName = 'Invalid file name (no special characters, max 100 chars)';
-    }
-
-    // Video URL validation
-    if (!values.videoUrl) {
-        errors.videoUrl = 'Required';
-    } else {
-        try {
-            new URL(values.videoUrl);
-            if (/[<>"'`]/.test(values.videoUrl)) {
-                errors.videoUrl = 'URL contains invalid characters';
-            }
-        } catch {
-            errors.videoUrl = 'Invalid URL';
-        }
-    }
-
-    // Description validation
-    if (!values.description) {
-        errors.description = 'Required';
-    } else if (/<script[\s\S]*?>[\s\S]*?<\/script>/gi.test(values.description)) {
-        errors.description = 'Description contains forbidden content';
-    }
-
-    return errors;
-};
 
 const MultimediaTable: React.FC = () => {
-    const { addVideo, loading, error } = useVideos();
+    const { key } = useParams<{ key: string }>();
+    const { addVideo, getVideo, loading, error } = useVideos();
+    const isEditMode = Boolean(key);
+    // for forcing re-render of UploadBanner component
+    const [resetKey, setResetKey] = useState(0);
+
+    const handleReset = () => {
+        formik.resetForm();
+        setResetKey(prev => prev + 1); // Force UploadBanner to re-render
+    };
 
     const formik = useFormik({
         initialValues: {
@@ -80,6 +47,7 @@ const MultimediaTable: React.FC = () => {
                     videoFileName: values.videoFileName,
                     videoUrl: values.videoUrl, // Using videoUrl as position for now
                     readingVolume: 0, // Default value
+                    description: values.description,
                     createdBy: 'current-user', // You should replace this with actual user info
                     lastEditedBy: 'current-user', // You should replace this with actual user info
                     position: 0,
@@ -88,8 +56,14 @@ const MultimediaTable: React.FC = () => {
 
                 await addVideo(videoData);
 
+                message.success('Successful! Video uploaded');
+
                 // Reset form on successful submission
                 resetForm();
+
+                // Reset the UploadBanner component
+                handleReset();
+
 
                 // Show success message
                 console.log('Video uploaded successfully!');
@@ -102,12 +76,40 @@ const MultimediaTable: React.FC = () => {
         },
     })
 
+    useEffect(() => {
+        if (isEditMode && key) {
+            const loadVideoData = async () => {
+                try {
+                    const videoData = await getVideo(key);
+                    if (videoData) {
+
+                        // change thumnail to Blob
+
+                        formik.setValues({
+                            thumbnail: videoData.thumbnail,
+                            videoFileName: videoData.videoFileName || '',
+                            videoUrl: videoData.videoUrl || '',
+                            description: videoData.description || '',
+                            isActive: videoData.status || true,
+                        });
+
+
+                    }
+                } catch (error) {
+                    console.error('Failed to load video data:', error);
+                }
+            };
+            loadVideoData();
+        }
+    }, [key, isEditMode]);
+
     return (
         <form onSubmit={formik.handleSubmit}>
             <div className="*:mt-4">
 
                 {/* TODO Clear upload file after submit */}
                 <UploadBanner
+                    key={resetKey} // Reset key to force re-render
                     id="thumbnail"
                     name="thumbnail"
                     title="Thumbnail"
@@ -163,7 +165,10 @@ const MultimediaTable: React.FC = () => {
                     <Button
                         color="red"
                         variant="outlined"
-                        onClick={() => formik.resetForm()}
+                        onClick={() => {
+                            formik.resetForm()
+                            handleReset();
+                        }}
                         disabled={formik.isSubmitting}
                     >
                         Cancel
@@ -174,7 +179,7 @@ const MultimediaTable: React.FC = () => {
                         loading={formik.isSubmitting || loading}
                         disabled={formik.isSubmitting}
                     >
-                        Save
+                        {isEditMode ? 'Update' : 'Save'}
                     </Button>
                 </div>
             </div>
@@ -183,3 +188,51 @@ const MultimediaTable: React.FC = () => {
 }
 
 export default MultimediaTable;
+
+type FormValues = {
+    thumbnail: File | null;
+    videoFileName: string;
+    videoUrl: string;
+    description: string;
+    isActive: boolean;
+};
+
+
+const validateForm = (values: FormValues) => {
+    const errors: Partial<Record<keyof FormValues, string>> = {};
+
+    // Thumbnail validation
+    if (!values.thumbnail) {
+        errors.thumbnail = 'Thumbnail is required';
+    }
+
+    // Video file name validation
+    if (!values.videoFileName) {
+        errors.videoFileName = 'Required';
+    } else if (!/^[\w\s\-\.\u4e00-\u9fff\u0e00-\u0e7f]{1,100}$/.test(values.videoFileName)) {
+        errors.videoFileName = 'Invalid file name (no special characters, max 100 chars)';
+    }
+
+    // Video URL validation
+    if (!values.videoUrl) {
+        errors.videoUrl = 'Required';
+    } else {
+        try {
+            new URL(values.videoUrl);
+            if (/[<>"'`]/.test(values.videoUrl)) {
+                errors.videoUrl = 'URL contains invalid characters';
+            }
+        } catch {
+            errors.videoUrl = 'Invalid URL';
+        }
+    }
+
+    // Description validation
+    if (!values.description) {
+        errors.description = 'Required';
+    } else if (/<script[\s\S]*?>[\s\S]*?<\/script>/gi.test(values.description)) {
+        errors.description = 'Description contains forbidden content';
+    }
+
+    return errors;
+};

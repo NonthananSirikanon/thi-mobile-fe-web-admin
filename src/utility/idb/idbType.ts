@@ -1,22 +1,25 @@
 import type { DBSchema } from "idb";
 
+export interface Media {
+  frontendId: string;
+  id: string;
+  status: boolean;
+  videoFileName: string;
+  thumbnail: File | any;
+  readingVolume: number;
+  videoUrl?: string;
+  createdBy: string;
+  lastEditedBy: string;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+  publish: Date | string;
+  description?: string;
+}
 export interface MediaDB extends DBSchema {
 
   media: {
     key: string; // video ID
-    value: {
-      key: string;
-      status: boolean;
-      videoFileName: string;
-      thumbnail: File | any; // URL or base64
-      readingVolume: number;
-      videoUrl?: string; // URL to the video file
-      createdBy: string; // user ID or name
-      lastEditedBy: string; // user ID or name
-      createdAt: Date | string; // Use string if you want to display formatted date
-      updatedAt: Date | string; // Use string if you want to display formatted date
-      publish: Date | string;
-    };
+    value: Media;
 
     // indexes: {
     //   'by-status': string;

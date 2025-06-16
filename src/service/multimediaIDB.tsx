@@ -1,11 +1,11 @@
-import type { MediaDB } from "../utility/idb/idbType";
+import type { Media } from "../utility/idb/idbType";
 import { getDB } from "../utility/idb/idbUtils";
 
-export type Video = MediaDB['media']['value'];
+export type Video = Media;
 // omit remove the specified keys from the type
-export type VideoInput = Omit<Video, 'key' | 'createdAt' | 'updatedAt'>;
+export type VideoInput = Omit<Video, 'frontendId' | 'id' | 'createdAt' | 'updatedAt'>;
 // Partial makes all properties optional
-export type VideoUpdate = Partial<Omit<Video, 'key' | 'createdAt'>>;
+export type VideoUpdate = Partial<Omit<Video, 'frontendId' | 'id' | 'createdAt'>>;
 
 export class VideoService {
     // Create new video
@@ -14,14 +14,15 @@ export class VideoService {
         const now = new Date();
 
         const video: Video = {
-            key: crypto.randomUUID(),
+            frontendId: crypto.randomUUID(), // Generate a unique key
             ...videoData,
+            id: "0",
             createdAt: now,
             updatedAt: now,
         };
 
         await db.add('media', video);
-        return video.key;
+        return video.id;
     }
 
     // Get single video

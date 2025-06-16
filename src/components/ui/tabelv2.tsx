@@ -11,28 +11,19 @@ import {
     verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Button, Table } from 'antd';
+import { Button, message, Table } from 'antd';
 import type { TableColumnsType } from 'antd';
 import Switch from './switch';
 import ActionsDropdown from './actionDropdown';
 import DeleteModal from './deleteModal';
-import { message } from 'antd';
 import { useVideos } from '../../hooks/useMedia';
+import { useNavigate } from 'react-router-dom';
+import type { Media } from '../../utility/idb/idbType';
+import { Video } from 'lucide-react';
+import VideoModal from './videoModal';
 
 
-interface DataType {
-    key: string;
-    status: boolean;
-    videoFileName: string;
-    thumbnail: File | any; // URL or base64
-    readingVolume: number;
-    videoUrl?: string; // URL to the video file
-    createdBy: string; // user ID or name
-    lastEditedBy: string; // user ID or name
-    createdAt: Date | string; // Use string if you want to display formatted date
-    updatedAt: Date | string; // Use string if you want to display formatted date
-    publish: Date | string;
-}
+type DataType = Media
 
 interface RowContextProps {
     setActivatorNodeRef?: (element: HTMLElement | null) => void;
@@ -91,7 +82,8 @@ const Row: React.FC<RowProps> = (props) => {
 
 const initialData: DataType[] = [
     {
-        key: '2',
+        id: '0',
+        frontendId: '2',
         videoFileName: 'John Bwn',
         status: true,
         thumbnail: 'https://dummyimage.com/600x400/000/fff',
@@ -103,7 +95,8 @@ const initialData: DataType[] = [
         publish: '2024-06-12 09:00',
     },
     {
-        key: '1',
+        id: '0',
+        frontendId: '1',
         videoFileName: 'John Brown',
         status: false,
         thumbnail: 'https://dummyimage.com/600x400/000/fff',
@@ -116,10 +109,14 @@ const initialData: DataType[] = [
     },
 ];
 
+interface MultimediaTableProps {
+    isPublic?: boolean;
+}
 
-export const MultimediaTable: React.FC = () => {
+export const MultimediaTable: React.FC<MultimediaTableProps> = ({ isPublic }) => {
+    const navigate = useNavigate();
     const [dataSource, setDataSource] = useState<DataType[]>(initialData);
-    const { videos, loading, error } = useVideos();
+    const { videos, loading, error, deleteVideo, updateVideo } = useVideos();
 
 
     // if (loading) return <div>Loading videos...</div>;
@@ -129,24 +126,27 @@ export const MultimediaTable: React.FC = () => {
      * * Modal state management for delete confirmation
      */
     const [modalOpen, setModalOpen] = useState(false);
+    const [videoModalOpen, setVideoModalOpen] = useState(false);
     const [selectedThumbnail, setSelectedThumbnail] = useState<string | undefined>('');
+    const [selectedVideo, setSelectedVideo] = useState<string | undefined>('');
     const [deleteKey, setDeleteKey] = useState<string | null>(null);
     const confirmDelete = () => {
-        // if (deleteKey) {
-        //     setDataSource((prevState) => prevState.filter((item) => item.key !== deleteKey));
-        //     setModalOpen(false);
-        //     setDeleteKey(null);
-        //     setSelectedThumbnail('');
-        //     message.success('Successful! deleted');
+        if (deleteKey) {
+            // setDataSource((prevState) => prevState.filter((item) => item.key !== deleteKey));
+            deleteVideo(deleteKey)
+            setModalOpen(false);
+            setDeleteKey(null);
+            setSelectedThumbnail('');
+            message.success('Successful! deleted');
 
-        // }
+        }
     };
 
     const onDragEnd = ({ active, over }: DragEndEvent) => {
         if (active.id !== over?.id) {
             setDataSource((prevState) => {
-                const activeIndex = prevState.findIndex((record) => record.key === active?.id);
-                const overIndex = prevState.findIndex((record) => record.key === over?.id);
+                const activeIndex = prevState.findIndex((record) => record.frontendId === active?.id);
+                const overIndex = prevState.findIndex((record) => record.frontendId === over?.id);
                 return arrayMove(prevState, activeIndex, overIndex);
             });
         }
@@ -154,14 +154,15 @@ export const MultimediaTable: React.FC = () => {
 
 
     // Log the data source whenever it changes
-    useEffect(() => {
-        console.log('Data source updated:', dataSource);
-        console.log('Data source updated:', videos);
-    }, [dataSource, videos]);
+    // useEffect(() => {
+    //     console.log('Data source updated:', dataSource);
+    //     console.log('Data source updated:', videos);
+    // }, [dataSource, videos]);
 
 
     // Function to handle status change
     const handleStatusChange = (key: string, status: boolean) => {
+        updateVideo(key, { status })
         // setDataSource((prevState) =>
         //     prevState.map((item) =>
         //         item.key === key ? { ...item, status } : item
@@ -177,7 +178,7 @@ export const MultimediaTable: React.FC = () => {
 
         {
             title: 'Status', dataIndex: 'status', render: (status, record) => (
-                <Switch checked={status} onChange={(check) => { handleStatusChange(record.key, check) }} />
+                <Switch checked={status} onChange={(check) => { handleStatusChange(record.frontendId, check) }} />
             )
         },
         {
@@ -212,36 +213,62 @@ export const MultimediaTable: React.FC = () => {
                 return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
             }
         },
-        { title: 'Publish', dataIndex: 'publish' },
-        {
+        !isPublic ? { title: 'Publish', dataIndex: 'publish' } : {},
+        !isPublic ? {
             title: 'Action', dataIndex: 'action', render: (_, record) => (
                 <ActionsDropdown
                     onDelete={() => {
-                        setSelectedThumbnail(record.thumbnail);
-                        setDeleteKey(record.key);
+                        let thumb = record.thumbnail;
+                        if (thumb instanceof Blob) {
+                            thumb = URL.createObjectURL(thumb);
+                        }
+                        setSelectedThumbnail(thumb);
+                        setDeleteKey(record.frontendId);
                         setModalOpen(true);
-
+                    }}
+                    onEdit={() => {
+                        navigate(`/multimedia/edit/${record.frontendId}`);
+                    }}
+                    onPreview={() => {
+                        let thumb = record.thumbnail;
+                        if (thumb instanceof Blob) {
+                            thumb = URL.createObjectURL(thumb);
+                        }
+                        setSelectedThumbnail(thumb);
+                        setSelectedVideo(record.videoUrl);
+                        setVideoModalOpen(true);
                     }}
                 />
             )
-        },
+        } : {},
     ];
 
     return (
         <>
-            <DndContext modifiers={[restrictToVerticalAxis]} onDragEnd={onDragEnd}>
-                <SortableContext items={videos.map((i) => i.key)} strategy={verticalListSortingStrategy}>
-                    <Table<DataType>
-                        rowKey="key"
-                        components={{ body: { row: Row } }}
-                        columns={columns}
-                        dataSource={videos}
-                        pagination={false}
-                        scroll={{ x: 'max-content' }}
-                    />
-                </SortableContext>
-            </DndContext>
-            <DeleteModal imageUrl={selectedThumbnail} open={modalOpen} onOk={confirmDelete} onCancel={() => setModalOpen(false)} />
+            <div className="bg-white shadow-sm rounded-lg overflow-hidden">
+                <DndContext modifiers={[restrictToVerticalAxis]} onDragEnd={onDragEnd}>
+                    <SortableContext items={videos.map((i) => i.frontendId)} strategy={verticalListSortingStrategy}>
+                        <Table<DataType>
+                            rowKey="frontendId"
+                            components={{ body: { row: Row } }}
+                            columns={columns}
+                            dataSource={videos}
+                            pagination={false}
+                            scroll={{ x: 'max-content' }}
+                            size='middle'
+                            style={{
+                                '--ant-table-header-bg': '#fafafa',
+                                '--ant-table-header-color': '#8c8c8c',
+                                '--ant-table-header-font-size': '12px',
+                                '--ant-table-header-font-weight': '600',
+                            } as React.CSSProperties}
+                            className="[&_.ant-table-thead>tr>th]:bg-gray-50 [&_.ant-table-thead>tr>th]:text-gray-500 [&_.ant-table-thead>tr>th]:font-semibold [&_.ant-table-thead>tr>th]:text-xs [&_.ant-table-thead>tr>th]:uppercase [&_.ant-table-thead>tr>th]:tracking-wide [&_.ant-table-tbody>tr:hover>td]:bg-gray-50"
+                        />
+                    </SortableContext>
+                </DndContext>
+                <DeleteModal imageUrl={selectedThumbnail} open={modalOpen} onOk={confirmDelete} onCancel={() => setModalOpen(false)} />
+                <VideoModal open={videoModalOpen} videoUrl={selectedVideo} thumbnailUrl={selectedThumbnail} onClose={() => setVideoModalOpen(false)} />
+            </div >
         </>
     );
 };

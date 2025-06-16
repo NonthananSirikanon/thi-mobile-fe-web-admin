@@ -28,6 +28,8 @@ function AppRouter() {
         <Route path='/newsAgency' element={<NewsAgencyPage />} />
         <Route path='/multimedia' element={<MultimediaPage />} />
         <Route path='/multimedia/upload' element={<MultimediaUpload />} />
+        <Route path='/multimedia/edit/:key' element={<MultimediaUpload />} />
+
       </Routes>
     </Layout>
   )
