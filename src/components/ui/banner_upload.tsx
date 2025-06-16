@@ -2,6 +2,8 @@ import { useState } from "react";
 import { X, CloudUpload } from "lucide-react";
 
 interface UploadBannerProps {
+  id?: string;
+  name?: string;
   title?: string;
   required?: boolean;
   maxSize?: number;
@@ -10,6 +12,8 @@ interface UploadBannerProps {
 }
 
 export default function UploadBanner({
+  id,
+  name,
   title = "Upload banner",
   required = false,
   maxSize = 10,
@@ -130,19 +134,20 @@ export default function UploadBanner({
       </div>
 
       <div
-        className={`relative border-2 border-dashed rounded-lg overflow-hidden transition-colors ${
-          errorMessage
-            ? "border-red-500 bg-red-50"
-            : dragActive
+        className={`relative border-2 border-dashed rounded-lg overflow-hidden transition-colors ${errorMessage
+          ? "border-red-500 bg-red-50"
+          : dragActive
             ? "border-blue-400 bg-blue-50"
             : "border-gray-300 hover:border-gray-400"
-        }`}
+          }`}
         onDragEnter={handleDrag}
         onDragLeave={handleDrag}
         onDragOver={handleDrag}
         onDrop={handleDrop}
       >
         <input
+          id={id}
+          name={name}
           type="file"
           accept={supportedFormats.map((format) => `image/${format}`).join(",")}
           onChange={handleChange}
@@ -226,13 +231,12 @@ export default function UploadBanner({
         )}
       </div>
 
-      
+
       {error && <p className="text-sm text-red-600 mt-1">{error}</p>}
 
       <div
-        className={`mt-2 text-sm ${
-          errorMessage ? "text-red-500" : "text-gray-500"
-        }`}
+        className={`mt-2 text-sm ${errorMessage ? "text-red-500" : "text-gray-500"
+          }`}
       >
         {errorMessage ||
           `Only ${supportedFormats.join(", ")} are supported.`}

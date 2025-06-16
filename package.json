@@ -16,6 +16,8 @@
     "@tailwindcss/vite": "^4.1.7",
     "antd": "^5.25.2",
     "dayjs": "^1.11.13",
+    "formik": "^2.4.6",
+    "idb": "^8.0.3",
     "lucide-react": "^0.511.0",
     "primeicons": "^7.0.0",
     "primereact": "^10.9.5",
