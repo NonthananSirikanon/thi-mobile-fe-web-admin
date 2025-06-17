@@ -116,7 +116,7 @@ interface MultimediaTableProps {
 export const MultimediaTable: React.FC<MultimediaTableProps> = ({ isPublic }) => {
     const navigate = useNavigate();
     const [dataSource, setDataSource] = useState<DataType[]>(initialData);
-    const { videos, loading, error, deleteVideo, updateVideo } = useVideos();
+    const { videos, loading, error, deleteVideo, updateVideo, reorderVideos } = useVideos();
 
 
     // if (loading) return <div>Loading videos...</div>;
@@ -144,22 +144,17 @@ export const MultimediaTable: React.FC<MultimediaTableProps> = ({ isPublic }) =>
 
     const onDragEnd = ({ active, over }: DragEndEvent) => {
         if (active.id !== over?.id) {
-            setDataSource((prevState) => {
-                const activeIndex = prevState.findIndex((record) => record.frontendId === active?.id);
-                const overIndex = prevState.findIndex((record) => record.frontendId === over?.id);
-                return arrayMove(prevState, activeIndex, overIndex);
-            });
+            const activeIndex = videos.findIndex((record) => record.frontendId === active?.id);
+            const overIndex = videos.findIndex((record) => record.frontendId === over?.id);
+            const newOrder = arrayMove(videos, activeIndex, overIndex);
+            reorderVideos(newOrder);
         }
     };
 
-
-    // Log the data source whenever it changes
-    // useEffect(() => {
-    //     console.log('Data source updated:', dataSource);
-    //     console.log('Data source updated:', videos);
-    // }, [dataSource, videos]);
-
-
+    useEffect(() => {
+        // Log when the order of videos changes (after drag)
+        console.log('Videos order changed:', videos);
+    }, [videos]);
     // Function to handle status change
     const handleStatusChange = (key: string, status: boolean) => {
         updateVideo(key, { status })

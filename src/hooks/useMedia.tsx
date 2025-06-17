@@ -67,6 +67,10 @@ export const useVideos = () => {
         }
     }, [loadVideos]);
 
+    const reorderVideos = useCallback((reorderedVideos: Video[]) => {
+        setVideos(reorderedVideos);
+    }, []);
+
     useEffect(() => {
         loadVideos();
     }, [loadVideos]);
@@ -75,6 +79,7 @@ export const useVideos = () => {
         videos,
         loading,
         error,
+        reorderVideos,
         getVideo,
         addVideo,
         updateVideo,
