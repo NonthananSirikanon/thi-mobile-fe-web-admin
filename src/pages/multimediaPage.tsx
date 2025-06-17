@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Upload } from 'lucide-react';
 import { Button, Flex, Modal } from "antd";
-import { MultimediaTable } from '../components/ui/tabelv2';
+import { MultimediaTable } from '../components/ui/multimediaTable';
 import { useNavigate } from 'react-router-dom';
 
 
