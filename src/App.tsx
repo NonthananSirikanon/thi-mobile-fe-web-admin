@@ -63,6 +63,7 @@ const getAllBannersFromDB = async (): Promise<BannerData[]> => {
 
 function App() {
   const [isActive, setIsActive] = useState(true);
+  const [allBanners, setAllBanners] = useState<BannerData[]>([]); // เก็บข้อมูลทั้งหมด
   const [tableData, setTableData] = useState<TableModel>({
     header: ['Position', 'Status', 'Banner', 'URL', 'Created By', 'Edited By', 'Start Date', 'End Date', 'Duration', 'Publish Date', 'Actions'],
     body: {
@@ -77,74 +78,77 @@ function App() {
     console.log("ค้นหา:", value);
   };
 
+  // ฟังก์ชันสำหรับกรองข้อมูลตามสถานะ
+  const filterBannersByStatus = (banners: BannerData[], showActiveOnly: boolean) => {
+    if (showActiveOnly) {
+      return banners.filter(banner => banner.status === true);
+    }
+    return banners; // แสดงทั้งหมดถ้าไม่เลือก Active
+  };
+
+  // ฟังก์ชันสำหรับแปลงข้อมูลเป็นรูปแบบที่ table ใช้
+  const formatBannersForTable = (banners: BannerData[]) => {
+    return banners.map((banner) => ({
+      text: [
+        banner.position.toString(),
+        banner.status ? 'true' : 'false',
+        banner.banner,
+        banner.url,
+        banner.createdBy,
+        banner.editedBy,
+        `${banner.createdAt} ${banner.createdTime}`,
+        `${banner.updateAt} ${banner.updateTime}`,
+        banner.duration,
+        `${banner.publishDate} ${banner.publishTime}`,
+        banner.front_id?.toString() || ''
+      ],
+      function: { onClick: () => console.log('Action clicked for banner front_id:', banner.front_id, 'id:', banner.id) }
+    }));
+  };
+
+  // ฟังก์ชันสำหรับอัพเดต table data
+  const updateTableData = (banners: BannerData[]) => {
+    const filteredBanners = filterBannersByStatus(banners, isActive);
+    const formattedBanners = formatBannersForTable(filteredBanners);
+
+    setTableData({
+      header: ['Position', 'Status', 'Banner', 'URL', 'Created By', 'Edited By', 'Start Date', 'End Date', 'Duration', 'Publish Date', 'Actions'],
+      body: {
+        data: formattedBanners
+      }
+    });
+    
+    // อัพเดต bannerImages สำหรับ preview (ใช้ข้อมูลที่กรองแล้ว)
+    setBannerImages(filteredBanners.map(banner => banner.banner));
+  };
+
   const loadBannersFromDB = async () => {
     try {
       const banners = await getAllBannersFromDB();
-
-      if (banners.length > 0) {
-        const formattedBanners = banners.map((banner) => ({
-          text: [
-            banner.position.toString(),
-            banner.status ? 'true' : 'false',
-            banner.banner,
-            banner.url,
-            banner.createdBy,
-            banner.editedBy,
-            `${banner.createdAt} ${banner.createdTime}`,
-            `${banner.updateAt} ${banner.updateTime}`,
-            banner.duration,
-            `${banner.publishDate} ${banner.publishTime}`,
-            banner.front_id?.toString() || ''
-          ],
-          function: { onClick: () => console.log('Action clicked for banner front_id:', banner.front_id, 'id:', banner.id) }
-        }));
-
-        setTableData({
-          header: ['Position', 'Status', 'Banner', 'URL', 'Created By', 'Edited By', 'Start Date', 'End Date', 'Duration', 'Publish Date', 'Actions'],
-          body: {
-            data: formattedBanners
-          }
-        });
-        setBannerImages(banners.map(banner => banner.banner));
-      } else {
-        setBannerImages([]);
-      }
+      setAllBanners(banners); // เก็บข้อมูลทั้งหมด
+      updateTableData(banners); // อัพเดต table ด้วยข้อมูลที่กรองแล้ว
     } catch (error) {
       console.error('Error loading banners from DB:', error);
+      setAllBanners([]);
+      setBannerImages([]);
     }
   };
 
   const refreshTableData = async () => {
     try {
       const banners = await getAllBannersFromDB();
-
-      const formattedBanners = banners.map((banner) => ({
-        text: [
-          banner.position.toString(),
-          banner.status ? 'true' : 'false',
-          banner.banner,
-          banner.url,
-          banner.createdBy,
-          banner.editedBy,
-          `${banner.createdAt} ${banner.createdTime}`,
-          `${banner.updateAt} ${banner.updateTime}`,
-          banner.duration,
-          `${banner.publishDate} ${banner.publishTime}`,
-          banner.front_id?.toString() || ''
-        ],
-        function: { onClick: () => console.log('Action clicked for banner front_id:', banner.front_id, 'id:', banner.id) }
-      }));
-
-      setTableData(prev => ({
-        ...prev,
-        body: {
-          data: formattedBanners
-        }
-      }));
-      setBannerImages(banners.map(banner => banner.banner));
+      setAllBanners(banners); // อัพเดตข้อมูลทั้งหมด
+      updateTableData(banners); // อัพเดต table ด้วยข้อมูลที่กรองแล้ว
     } catch (error) {
       console.error('Error refreshing table data:', error);
     }
+  };
+
+  // ฟังก์ชันจัดการเมื่อเปลี่ยนสถานะ StatusToggle
+  const handleStatusToggleChange = (checked: boolean) => {
+    setIsActive(checked);
+    // อัพเดต table ทันทีด้วยข้อมูลที่มีอยู่
+    updateTableData(allBanners);
   };
 
   const handlePreviewAll = () => {
@@ -167,6 +171,13 @@ function App() {
   const handleClosePublishDialog = () => {
     setIsPublishDialogVisible(false);
   };
+
+  // Effect สำหรับกรองข้อมูลเมื่อ isActive เปลี่ยน
+  useEffect(() => {
+    if (allBanners.length > 0) {
+      updateTableData(allBanners);
+    }
+  }, [isActive]);
 
   useEffect(() => {
     loadBannersFromDB();
@@ -194,7 +205,11 @@ function App() {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap gap-4 justify-end">
-        <StatusToggle checked={isActive} onChange={setIsActive} />
+        <StatusToggle 
+          checked={isActive} 
+          onChange={handleStatusToggleChange}
+          label="Active"
+        />
         <SearchInput onSearch={handleSearch} />
         
         <Link to="/addbanner">
@@ -216,11 +231,6 @@ function App() {
       <div className="">
         <AntTable {...tableData} />
       </div>
-      
-      <nav className="mt-4">
-        <Link to="/" className="text-blue-500 hover:text-blue-700 mr-2">Home</Link> |
-        <Link to="/addbanner" className="text-blue-500 hover:text-blue-700 ml-2">Add Banner</Link>
-      </nav>
 
       <UniversalDialog
         type="previewBanner"
