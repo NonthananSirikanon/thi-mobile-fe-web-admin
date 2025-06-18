@@ -48,6 +48,34 @@ const deleteBannerFromDB = async (front_id: number): Promise<void> => {
   });
 };
 
+const updateBannerStatusInDB = async (front_id: number, status: boolean): Promise<void> => {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction([STORE_NAME], 'readwrite');
+    const store = transaction.objectStore(STORE_NAME);
+    
+    // ดึงข้อมูลเดิมมาก่อน
+    const getRequest = store.get(front_id);
+    
+    getRequest.onsuccess = () => {
+      const banner = getRequest.result;
+      if (banner) {
+        // อัพเดตสถานะ
+        banner.status = status;
+        
+        // บันทึกกลับไป
+        const updateRequest = store.put(banner);
+        updateRequest.onsuccess = () => resolve();
+        updateRequest.onerror = () => reject(updateRequest.error);
+      } else {
+        reject(new Error('Banner not found'));
+      }
+    };
+    
+    getRequest.onerror = () => reject(getRequest.error);
+  });
+};
+
 // ============ TYPES & INTERFACES ============
 export interface TableDataModel {
   text: string[];
@@ -63,6 +91,7 @@ export interface TableBodyModel {
 export interface TableModel {
   header: string[];
   body: TableBodyModel;
+  onDataChange?: () => void; // เพิ่ม callback สำหรับแจ้งเมื่อข้อมูลเปลี่ยน
 }
 
 // ============ DRAG CONTEXT ============
@@ -185,7 +214,7 @@ const ActionsDropdown: React.FC<ActionsDropdownProps> = ({ record, onEdit, onDel
 };
 
 // ============ MAIN TABLE COMPONENT ============
-export const AntTable: React.FC<Omit<TableModel, 'header'>> = ({ body }) => {
+export const AntTable: React.FC<TableModel> = ({ body, onDataChange }) => {
   const navigate = useNavigate();
   const [dataSource, setDataSource] = useState<DataType[]>([]);
   const [isDeleteDialogVisible, setIsDeleteDialogVisible] = useState(false);
@@ -213,12 +242,36 @@ export const AntTable: React.FC<Omit<TableModel, 'header'>> = ({ body }) => {
     setDataSource(newDataSource);
   }, [body.data]);
 
-  const handleStatusChange = (key: string, checked: boolean) => {
+  const handleStatusChange = async (key: string, checked: boolean) => {
+    // อัพเดตใน state ทันที
     setDataSource(prev => 
       prev.map(item => 
         item.key === key ? { ...item, status: checked } : item
       )
     );
+
+    // หา record ที่ต้องอัพเดต
+    const record = dataSource.find(item => item.key === key);
+    if (record && record.front_id) {
+      try {
+        // อัพเดตใน IndexedDB
+        await updateBannerStatusInDB(record.front_id, checked);
+        console.log('Status updated in IndexedDB:', record.front_id, checked);
+        
+        // แจ้ง parent component ให้ refresh ข้อมูล
+        if (onDataChange) {
+          onDataChange();
+        }
+      } catch (error) {
+        console.error('Error updating status in IndexedDB:', error);
+        // หากเกิดข้อผิดพลาด ให้ revert การเปลี่ยนแปลงใน UI
+        setDataSource(prev => 
+          prev.map(item => 
+            item.key === key ? { ...item, status: !checked } : item
+          )
+        );
+      }
+    }
   };
 
   const handleEdit = (record: DataType) => {
@@ -264,6 +317,11 @@ export const AntTable: React.FC<Omit<TableModel, 'header'>> = ({ body }) => {
       }
       
       setDataSource(prev => prev.filter(item => item.key !== selectedRecord.key));
+      
+      // แจ้ง parent component ให้ refresh ข้อมูล
+      if (onDataChange) {
+        onDataChange();
+      }
       
     } catch (error) {
       console.error('Error deleting banner from IndexedDB:', error);

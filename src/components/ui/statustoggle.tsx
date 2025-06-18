@@ -14,17 +14,17 @@ const StatusToggle: React.FC<StatusToggleProps> = ({ checked, onChange, label = 
   };
 
   return (
-    <div className="w-[115px]">
+    <div className="">
     <div
-      className={`flex items-center px-3 py-1 rounded-full border text-sm font-medium transition-all
-        ${checked ? 'bg-blue-100 border-blue-400 text-blue-600' : 'bg-white border-blue-300 text-blue-500'}`}
+      className={`flex items-center px-3 py-2 rounded-[4px] border text-sm font-medium transition-all
+        ${checked ? 'bg-blue-100 border-blue-400 text-blue-600' : 'bg-white border-gray-300 text-blue-500'}`}
     >
       <Checkbox
         checked={checked}
         onChange={handleCheckboxChange}
-        className="mr-2 "
+        className=""
       />
-      <span>{label}</span>
+      <span className='ml-3'>{label}</span>
     </div>
     </div>
   );
