@@ -51,7 +51,7 @@ export const URLInput: React.FC<URLInputProps> = ({
 
   return (
     <div className="w-full">
-      {label && <label className="mb-1 block text-gray-700 font-medium">{label}</label>}
+      {label && <label className="block text-gray-700 font-medium">{label}</label>}
       <Input
         value={internalValue}
         onChange={handleChange}

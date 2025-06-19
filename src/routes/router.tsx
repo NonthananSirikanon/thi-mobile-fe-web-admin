@@ -8,6 +8,8 @@ import MagazinePage from '../screens/magazine/page/magazine_page'
 import AddMagazine from '../screens/magazine/page/add_magazine'
 import NewsCategoryPage from '../screens/news/page/create_news_category'
 import NewsAgencyPage from '../screens/news/page/add_news_agency'
+import MultimediaPage from '../pages/multimediaPage'
+import MultimediaUpload from '../pages/multimediaUpload'
 
 
 
@@ -21,10 +23,14 @@ function AppRouter() {
         <Route path="/addnews" element={<AddNews />} />
         <Route path="/addNews/:id" element={<AddNews />} />
         <Route path="/magazine" element={<MagazinePage />} />
-        <Route path="/addMagazine" element={<AddMagazine/>} />
-        <Route path="/addMagazine/:id" element={<AddMagazine/>} />
-        <Route path='/newsCategory' element={<NewsCategoryPage/>} />
-        <Route path='/newsAgency' element={<NewsAgencyPage/>} />
+        <Route path="/addMagazine" element={<AddMagazine />} />
+        <Route path="/addMagazine/:id" element={<AddMagazine />} />
+        <Route path='/newsCategory' element={<NewsCategoryPage />} />
+        <Route path='/newsAgency' element={<NewsAgencyPage />} />
+        <Route path='/multimedia' element={<MultimediaPage />} />
+        <Route path='/multimedia/upload' element={<MultimediaUpload />} />
+        <Route path='/multimedia/edit/:key' element={<MultimediaUpload />} />
+
       </Routes>
     </Layout>
   )

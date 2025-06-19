@@ -17,6 +17,7 @@ const ThailandHeadline = ({ collapsed }: ThailandHeadlineProps) => {
     { to: "/", label: "Banner" },
     { to: "/news", label: "News" },
     { to: "/magazine", label: "Magazine" },
+    { to: "/multimedia", label: "Multimedia" },
   ];
 
   return collapsed ? (
@@ -47,7 +48,7 @@ const ThailandHeadline = ({ collapsed }: ThailandHeadlineProps) => {
       {isExpanded && (
         <div className="mt-2 space-y-1 ml-2">
           {menuItems.map(({ to, label }) => {
-            const isActive = pathname === to;
+            const isActive = (to === "/multimedia" && pathname.startsWith("/multimedia")) || pathname === to;
             const baseClass = "px-4 py-2 rounded-lg font-medium text-sm block";
             const activeClass = isActive
               ? "bg-blue-100 text-blue-700 hover:bg-blue-200"
