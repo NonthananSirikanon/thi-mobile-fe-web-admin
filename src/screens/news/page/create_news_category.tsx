@@ -1,10 +1,11 @@
-import { useState } from "react";
-import { Modal, Input } from "antd";
+import { useEffect, useState } from "react";
+import { Modal, Input, Alert } from "antd";
 import { useNavigate } from "react-router-dom";
 import ActionButton from "../ui/actionbutton";
 import "../news.css";
 import NewsAdminLayout from "./add_news_layout";
-import { AntTable, type TableModel } from "../ui/table";
+import { AntTable, type TableModel } from "../ui/table_cetegory";
+import { createNewsCategory, deleteNewsCategory, fetchCategoryFromAPI } from "../service/news_category";
 
 function NewsCategoryPage() {
   const [newsList, setNewsList] = useState<any[]>([]);
@@ -13,13 +14,29 @@ function NewsCategoryPage() {
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const navigate = useNavigate();
 
+  const [notificationMessage, setNotificationMessage] = useState('');
+  const [notificationType, setNotificationType] = useState<'success' | 'error' | null>(null);
+
+
+  useEffect(() => {
+    async function loadCategories() {
+      const categories = await fetchCategoryFromAPI();
+      setNewsList(categories);
+    }
+
+    loadCategories();
+  }, []);
+
+
   const handleEdit = (id: string) => {
     navigate(`/addCategory/${id}`);
   };
 
   const handleDelete = async (id: string) => {
     try {
-      const newList = newsList.filter((item) => item.id.toString() !== id.toString());
+      await deleteNewsCategory(Number(id), 1);
+
+      const newList = newsList.filter((item) => item.categoryId.toString() !== id.toString());
       setNewsList(newList);
     } catch (error) {
       console.error("ลบข่าวไม่สำเร็จ:", error);
@@ -32,36 +49,68 @@ function NewsCategoryPage() {
 
   const handleModalOk = () => {
     setIsModalOpen(false);
-    setIsConfirmOpen(true); // แสดง popup ยืนยัน
+    setIsConfirmOpen(true);
   };
 
-  const handleConfirmOk = () => {
-    console.log("✅ สร้าง category:", categoryName);
-    setIsConfirmOpen(false);
-    setCategoryName('');
+  const handleConfirmOk = async () => {
+    try {
+      if (!categoryName.trim()) {
+        setNotificationMessage('Category name is required');
+        setNotificationType('error');
+        setTimeout(() => {
+          setNotificationMessage('');
+          setNotificationType(null);
+        }, 3000);
+        return;
+      }
+
+      const result = await createNewsCategory(categoryName, false, 4);
+      console.log("✅ สร้าง category:", result);
+
+      setIsConfirmOpen(false);
+      setCategoryName('');
+
+      const categories = await fetchCategoryFromAPI();
+      setNewsList(categories);
+
+      setNotificationMessage('Successfully updated');
+      setNotificationType('success');
+    } catch (error) {
+      console.error("❌ สร้าง category ไม่สำเร็จ:", error);
+      setNotificationMessage('Update failed');
+      setNotificationType('error');
+    }
+
+    // ล้างข้อความหลัง 3 วิ
+    setTimeout(() => {
+      setNotificationMessage('');
+      setNotificationType(null);
+    }, 3000);
   };
+
 
   const tableData: TableModel = {
-    header: ["#", "Status", "Headline", "Type", "Created At", "Updated At", "Actions"],
+    header: ["#", "Status", "News Category", "Created By", "Last Edited By", "Created At", "Updated At", "Actions"],
     body: {
       data: newsList.map((item, index) => ({
-        key: item.id,
-        id: item.id,
-        headline: item.headline || "",
+        key: item.categoryId,
+        id: item.categoryId,
         textDetail: item.text || "",
         newsType: item.newsType || "",
         category: item.category || "",
         text: [
           (index + 1).toString(),
-          item.isBannerActive?.toString() || "",
-          item.headline || "",
-          item.newsType || "",
+          item.status?.toString() || "",
+          item.name || "",
+          item.AuthorFullName || "",
+          item.UpdatedFullName || "",
           item.createdAt || "",
           item.updatedAt || "",
+          item.publicAt || "",
           "",
         ],
         function: {
-          onClick: () => console.log("Clicked:", item.id),
+          onClick: () => console.log("Clicked:", item.categoryId),
         },
       })),
     },
@@ -69,7 +118,15 @@ function NewsCategoryPage() {
 
   return (
     <NewsAdminLayout>
-      {/* คำเตือน */}
+      {notificationMessage && (
+        <Alert
+          message={notificationMessage}
+          type={notificationType === 'success' ? 'success' : 'error'}
+          showIcon
+          className="my-4"
+        />
+      )}
+
       <div className="bg-[#FFF0D3] text-[12px] p-5 rounded">
         <p><span className="text-red-500">*</span> Adding, editing, or deleting a news category here will affect:
           The “Select News Category” dropdown in the Add News page.</p>
@@ -77,7 +134,6 @@ function NewsCategoryPage() {
           Please review changes carefully to avoid data mismatch.</p>
       </div>
 
-      {/* ปุ่ม Action */}
       <div className="flex justify-between justify-end p-4 w-full">
         <div className="flex flex-wrap gap-4">
           <ActionButton type="createNewsCategory" onClick={handleCreateClick} />
@@ -85,7 +141,6 @@ function NewsCategoryPage() {
         </div>
       </div>
 
-      {/* ตาราง */}
       <div>
         <AntTable
           body={tableData.body}
@@ -123,7 +178,7 @@ function NewsCategoryPage() {
 
 
       <Modal
-      width={465}
+        width={465}
         title={<div className="text-center text-lg font-semibold mb-5">Confirm Changes</div>}
         open={isConfirmOpen}
         onOk={handleConfirmOk}

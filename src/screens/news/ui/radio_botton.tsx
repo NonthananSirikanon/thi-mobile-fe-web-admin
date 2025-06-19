@@ -10,7 +10,7 @@ interface RadioGroupProps {
   name?: string;
   required?: boolean;
   options?: RadioOption[];
-  value?: string; // <-- แทน defaultValue
+  value?: string;
   onChange?: (value: string) => void;
   label?: string;
 }
@@ -19,10 +19,10 @@ const RadioGroup: React.FC<RadioGroupProps> = ({
   name = 'radio-group',
   required = false,
   options = [
-    { label: 'Hot News', value: 'HotNews' },
-    { label: 'Feature News', value: 'FeatureNews' },
+    { label: 'Hot News', value: 'Hotnews' },
+    { label: 'Feature News', value: 'Featurenews' },
   ],
-  value = '', // ← ใช้จาก parent component
+  value = '',
   onChange,
   label = 'Topic',
 }) => {

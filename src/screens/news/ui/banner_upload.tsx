@@ -41,7 +41,7 @@ export default function UploadBanner({
 
     return () => {
       if (imageUrl) {
-        URL.revokeObjectURL(imageUrl); // เคลียร์ URL ที่สร้างขึ้นเมื่อเปลี่ยนไฟล์
+        URL.revokeObjectURL(imageUrl);
       }
     };
   }, [initialFile]);
@@ -158,11 +158,11 @@ export default function UploadBanner({
 
           {uploadedFile && imageUrl ? (
 
-            <div className="relative">
+            <div className="relative w-full h-full">
               <img
                 src={imageUrl}
                 alt={uploadedFile.name}
-                className="w-full h-full object-cover"
+                className="absolute inset-0 w-full h-full object-cover"
               />
 
               <div className="absolute inset-0 bg-black bg-opacity-40 opacity-0 hover:opacity-100 transition-opacity duration-200">

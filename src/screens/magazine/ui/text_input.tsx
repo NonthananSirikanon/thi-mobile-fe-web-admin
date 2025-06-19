@@ -1,23 +1,30 @@
-
-import React, { useState } from 'react';
+// components/ui/TextInput.tsx
+import React from 'react';
 import { Input } from 'antd';
 
-interface TextInput {
+interface TextInputProps {
   value: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   placeholder?: string;
   label?: string;
+  required?: boolean;
 }
 
-export const HeadlineInput: React.FC<TextInput> = ({
+export const TextInput: React.FC<TextInputProps> = ({
   value,
   onChange,
-  placeholder = 'Enter your headlines',
-  label = 'Headlines'
+  placeholder = '',
+  label = '',
+  required = false,
 }) => {
   return (
     <div className="w-full">
-      <div className="mb-2 text-gray-700 font-medium">{label}</div>
+      {label && (
+        <div className="mb-2 text-gray-700 font-medium">
+          {label}
+          {required && <span className="text-red-500 ml-1">*</span>}
+        </div>
+      )}
       <Input
         value={value}
         onChange={onChange}

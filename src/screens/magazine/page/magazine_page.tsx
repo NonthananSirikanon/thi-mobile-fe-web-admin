@@ -1,25 +1,22 @@
 import { useEffect, useMemo, useState } from 'react';
-import './magazine.css';
-import StatusToggle from './ui/statustoggle';
-import ActionButton from './ui/actionbutton';
+import '../magazine.css';
+import StatusToggle from '../ui/statustoggle';
+import ActionButton from '../ui/actionbutton';
 import { Link } from 'react-router-dom';
-import { AntTable, type TableModel } from './ui/table';
-import SearchMenu from './ui/search_menu';
-import NewsTabSelector from './ui/news_tab';
+import { AntTable, type TableModel } from '../ui/table';
+import SearchMenu from '../ui/search_menu';
 import { useNavigate } from 'react-router-dom';
 
-
-// 👇 helper ฟังก์ชันอ่านจาก IndexedDB
 async function getAllNewsFromIndexedDB(): Promise<any[]> {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open('MyDB', 2);
+    const request = indexedDB.open('MyDB', 5);
 
     request.onerror = () => reject(request.error);
 
     request.onsuccess = () => {
       const db = request.result;
-      const tx = db.transaction('news-drafts', 'readonly');
-      const store = tx.objectStore('news-drafts');
+      const tx = db.transaction('magazine-drafts', 'readonly');
+      const store = tx.objectStore('magazine-drafts');
       const getAll = store.getAll();
 
       getAll.onsuccess = () => resolve(getAll.result);
@@ -30,12 +27,12 @@ async function getAllNewsFromIndexedDB(): Promise<any[]> {
 
 export const deleteNewsFromIndexedDB = async (id: string): Promise<void> => {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open('MyDB', 2);
+    const request = indexedDB.open('MyDB', 5);
 
     request.onsuccess = (event) => {
       const db = request.result;
-      const transaction = db.transaction(['news-drafts'], 'readwrite');
-      const objectStore = transaction.objectStore('news-drafts');
+      const transaction = db.transaction(['magazine-drafts'], 'readwrite');
+      const objectStore = transaction.objectStore('magazine-drafts');
       const deleteRequest = objectStore.delete(id);
 
       deleteRequest.onsuccess = () => {
@@ -56,17 +53,16 @@ export const deleteNewsFromIndexedDB = async (id: string): Promise<void> => {
 function MagazinePage() {
   const [newsList, setNewsList] = useState<any[]>([]);
   const [isActive, setIsActive] = useState(true);
-  const [selectedTab, setSelectedTab] = useState<'hotNews' | 'featureNews'>('hotNews');
   const navigate = useNavigate();
 
-  const handleEdit = (id: string) => {
-    navigate(`/addnews/${id}`);
+  const handleEdit = (front_id: string) => {
+    navigate(`/addMagazine/${front_id}`);
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (front_id: string) => {
     try {
-      await deleteNewsFromIndexedDB(id);
-      const newList = newsList.filter((item) => item.id.toString() !== id.toString());
+      await deleteNewsFromIndexedDB(front_id);
+      const newList = newsList.filter((item) => item.front_id.toString() !== front_id.toString());
       setNewsList(newList);
     } catch (error) {
       console.error('ลบข่าวไม่สำเร็จ:', error);
@@ -84,35 +80,34 @@ function MagazinePage() {
   }, []);
 
   const filteredNews = useMemo(() => {
-  return newsList.filter((item) => {
-    if (selectedTab === 'hotNews') return item.newsType === 'HotNews';
-    if (selectedTab === 'featureNews') return item.newsType === 'FeatureNews';
+  return newsList.filter(() => {
     return true;
   });
-}, [selectedTab, newsList]);
-
-
+}, [newsList]);
 
   const tableData: TableModel = {
-    header: ['#', 'Status', 'Headline', 'Type', 'Created At', 'Updated At', 'Actions'],
+    header: ['#', 'Status', 'Cover Image', 'Issue Number','Created By', 'Last Edited By', 'Created At','Update At' , 'Reading Volume','Likes' ,'Comments' ,'Shares' ,'Publish', 'Actions'],
     body: {
       data: filteredNews.map((item, index) => ({
-        key: item.id,
+        key: item.front_id,
+        front_id: item.front_id,
         id: item.id,
-        headline: item.headline || '',
-        textDetail:  item.text || '',
-        newsType:  item.newsType || '',
+        title: item.title || '',
+        pdfMagazine:  item.pdfMagazine || '',
         text: [
           (index + 1).toString(),   
           item.isBannerActive?.toString() || '',
-          item.bannerFile || '',              
+          item.bannerFile || '',            
+          item.issueNum || '',  
           item.createdBy || 'Admin',     
-          item.lastEditedBy || 'Editor',
+          item.lastEditedBy || 'Admin',
           item.createdAt || '',
           item.updatedAt || '',
-          item.headline || '',          
-          '',                                    
-          `${item.publishDate || '2024-12-31'} ${item.publishTime || '20:00'}`
+          item.readVolume || 0,
+          item.likes || 0,
+          item.comments || 0,
+          item.shares || 0,
+          item.publishAt || '',
         ],
 
         function: {

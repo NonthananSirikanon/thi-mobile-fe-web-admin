@@ -7,12 +7,12 @@ import { AntTable, type TableModel } from '../ui/table';
 import SearchMenu from '../ui/search_menu';
 import NewsTabSelector from '../ui/news_tab';
 import { useNavigate } from 'react-router-dom';
+import { fetchNewsFromAPI } from '../service/newsService';
 
 
-// 👇 helper ฟังก์ชันอ่านจาก IndexedDB
 async function getAllNewsFromIndexedDB(): Promise<any[]> {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open('MyDB', 2);
+    const request = indexedDB.open('MyDB', 5);
 
     request.onerror = () => reject(request.error);
 
@@ -30,7 +30,7 @@ async function getAllNewsFromIndexedDB(): Promise<any[]> {
 
 export const deleteNewsFromIndexedDB = async (id: string): Promise<void> => {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open('MyDB', 2);
+    const request = indexedDB.open('MyDB', 5);
 
     request.onsuccess = (event) => {
       const db = request.result;
@@ -58,6 +58,7 @@ function NewsPage() {
   const [isActive, setIsActive] = useState(true);
   const [selectedTab, setSelectedTab] = useState<'hotNews' | 'featureNews'>('hotNews');
   const navigate = useNavigate();
+  const [searchKeyword, setSearchKeyword] = useState('');
 
   const handleEdit = (id: string) => {
     navigate(`/addnews/${id}`);
@@ -73,47 +74,56 @@ function NewsPage() {
     }
   };
 
-
   useEffect(() => {
     getAllNewsFromIndexedDB()
-      .then((news) => {
-        console.log("✅ ข่าวจาก IndexedDB:", news);
-        setNewsList(news);
+      .then((indexedNews) => {
+        console.log('✅ ข่าวจาก IndexedDB:', indexedNews);
+        setNewsList(indexedNews);
+        return fetchNewsFromAPI();
       })
-      .catch((err) => console.error('Failed to load news from IndexedDB:', err));
+      .then((apiNews) => {
+        console.log('✅ ข่าวจาก API:', apiNews);
+        setNewsList((prev) => [...prev, ...apiNews]);
+      })
+      .catch((err) => {
+        console.error('โหลดข่าวล้มเหลว:', err);
+      });
   }, []);
 
   const filteredNews = useMemo(() => {
-  return newsList.filter((item) => {
-    if (selectedTab === 'hotNews') return item.newsType === 'HotNews';
-    if (selectedTab === 'featureNews') return item.newsType === 'FeatureNews';
-    return true;
-  });
-}, [selectedTab, newsList]);
+    return newsList.filter((item) => {
+      const tabMatch =
+        (selectedTab === 'hotNews' && item.type === 'Hotnews') ||
+        (selectedTab === 'featureNews' && item.type === 'Featurenews');
 
+      const statusMatch = item.status === isActive;
 
+      return tabMatch && statusMatch;
+    });
+  }, [selectedTab, isActive, newsList]);
 
   const tableData: TableModel = {
     header: ['#', 'Status', 'Headline', 'Type', 'Created At', 'Updated At', 'Actions'],
     body: {
       data: filteredNews.map((item, index) => ({
-        key: item.id,
-        id: item.id,
-        headline: item.headline || '',
-        textDetail:  item.text || '',
-        newsType:  item.newsType || '',
-        category: item.category || '',
+        key: item.front_id || item.newsId,
+        front_id: item.front_id,
+        id: item.id || item.newsId,
+        title: item.title || '',
+        content: item.text || '',
+        type: item.type || '',
+        categoryId: item.category || 0,
+        agencyId: item.agency || 0,
         text: [
-          (index + 1).toString(),   
-          item.isBannerActive?.toString() || '',
-          item.bannerFile || '',              
-          item.createdBy || 'Admin',     
-          item.lastEditedBy || 'Editor',
+          (index + 1).toString(),
+          item.status?.toString() || 'false',
+          item.thumbnail || '',
+          item.createdBy?.toString() || '0',
+          item.updatedBy?.toString() || '0',
           item.createdAt || '',
           item.updatedAt || '',
-          item.headline || '',          
-          '',                                    
-          `${item.publishDate || '2024-12-31'} ${item.publishTime || '20:00'}`
+          item.title || '',
+          `${item.publishDateTime || ''}`
         ],
 
         function: {
@@ -131,11 +141,11 @@ function NewsPage() {
 
       <div className="flex justify-between items-center p-4 w-full">
         <div className="flex-none">
-          <StatusToggle checked={isActive} onChange={setIsActive} />
+          <StatusToggle checked={isActive}   onChange={(checked) => setIsActive(checked)} />
         </div>
 
         <div className="flex-grow flex justify-center items-center px-4">
-          <SearchMenu />
+          <SearchMenu onSearch={(keyword) => setSearchKeyword(keyword)} />
         </div>
 
         <div className="flex flex-wrap gap-4 justify-end flex-none">
