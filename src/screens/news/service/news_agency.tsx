@@ -1,34 +1,31 @@
 const API_URL = import.meta.env.VITE_ADMINAGENCY_API_URL;
 
 export async function fetchAgencyFromAPI(): Promise<any[]> {
-    try {
-        console.log("🌐 API_URL:", API_URL);
+  try {
+    const response = await fetch(API_URL, {
+      method: "GET",
+      headers: {
+        'ngrok-skip-browser-warning': 'any',
+      },
+    });
+    console.log("🔍 status", response.status);
+    console.log("🔍 headers", [...response.headers.entries()]);
 
-        const response = await fetch(API_URL, {
-            method: "GET",
-            headers: {
-                'ngrok-skip-browser-warning': 'any',
-            },
-        });
-        console.log("🔍 status", response.status);
-        console.log("🔍 headers", [...response.headers.entries()]);
+    const text = await response.text();
+    console.log("📄 Raw Response:", text);
 
-        const text = await response.text();
+    const json = JSON.parse(text);
 
-        console.log("📄 Raw Response:", text);
-
-        const json = JSON.parse(text);
-
-        if (json.massage === 'success') {
-            return json.result;
-        } else {
-            console.error('API Error:', json);
-            return [];
-        }
-    } catch (error) {
-        console.error('Fetch Error:', error);
-        return [];
+    if (json.massage === 'success' && Array.isArray(json.result?.data)) {
+      return json.result.data;
+    } else {
+      console.error('Unexpected API format:', json);
+      return [];
     }
+  } catch (error) {
+    console.error('Fetch Error:', error);
+    return [];
+  }
 }
 
 export async function createNewsAgency(name: string) {
