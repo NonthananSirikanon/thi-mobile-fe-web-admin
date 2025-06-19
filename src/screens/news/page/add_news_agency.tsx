@@ -64,7 +64,7 @@ function NewsAgencyPage() {
 
   const handleConfirmOk = async () => {
     try {
-      const result = await createNewsCategory(categoryName);
+      const result = await createNewsCategory(categoryName, false, 1 );
       console.log("✅ สร้าง category:", result);
 
       setIsConfirmOpen(false);

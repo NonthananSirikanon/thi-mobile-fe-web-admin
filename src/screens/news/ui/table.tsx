@@ -370,6 +370,7 @@ export const AntTable: React.FC<AntTableProps> = ({ body, onEdit, onDelete }) =>
     if (!previewRecord || !['Hotnews', 'Featurenews'].includes(previewRecord.type)) return null;
 
     if (previewRecord.type === 'Featurenews') {
+
       return (
         <Modal
           open={isPreviewVisible}

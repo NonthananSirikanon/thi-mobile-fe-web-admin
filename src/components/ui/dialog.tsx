@@ -1,6 +1,7 @@
 // components/UniversalDialog.tsx
 import React from 'react';
 import { Modal, Button, Carousel } from 'antd';
+import { AntTable, type TableModel } from './table';
 
 interface BaseDialogProps {
   visible: boolean;
@@ -25,10 +26,17 @@ interface PreviewBannerDialogProps extends BaseDialogProps {
   bannerImages: string[]; 
 }
 
+interface PublishDialogProps extends BaseDialogProps {
+  type: 'publish';
+  onConfirm: () => void;
+  tableData: TableModel;
+}
+
 type UniversalDialogProps =
   | ConfirmDialogProps
   | DeleteDialogProps
-  | PreviewBannerDialogProps;
+  | PreviewBannerDialogProps
+  | PublishDialogProps;
 
 const UniversalDialog: React.FC<UniversalDialogProps> = (props) => {
   const { visible, onCancel } = props;
@@ -101,8 +109,50 @@ const UniversalDialog: React.FC<UniversalDialogProps> = (props) => {
           </div>
         );
 
+      case 'publish':
+        return (
+          <div className="w-full">
+            <div className="text-left mb-6">
+              <h2 className="text-lg font-semibold text-gray-700 mb-2">
+                Please change the status of one item before proceeding.
+              </h2>
+            </div>
+            
+            <div className="mb-6 max-h-96 overflow-auto">
+              <AntTable {...props.tableData} />
+            </div>
+            
+            <div className="flex justify-end gap-3">
+              <Button 
+                onClick={onCancel}
+                className="px-6 py-2 border border-gray-300 text-gray-600 hover:bg-gray-50"
+              >
+                Cancel
+              </Button>
+              <Button 
+                type="primary" 
+                onClick={props.onConfirm}
+                className="px-6 py-2 bg-blue-500 hover:bg-blue-600"
+              >
+                Confirm
+              </Button>
+            </div>
+          </div>
+        );
+
       default:
         return null;
+    }
+  };
+
+  const getModalWidth = () => {
+    switch (props.type) {
+      case 'publish':
+        return 1200;
+      case 'previewBanner':
+        return 800;
+      default:
+        return 520;
     }
   };
 
@@ -113,9 +163,12 @@ const UniversalDialog: React.FC<UniversalDialogProps> = (props) => {
       footer={null}
       centered
       closable
+      width={getModalWidth()}
       className="rounded-xl"
     >
-      <div className="text-center p-4">{renderContent()}</div>
+      <div className={props.type === 'publish' ? 'p-4' : 'text-center p-4'}>
+        {renderContent()}
+      </div>
     </Modal>
   );
 };

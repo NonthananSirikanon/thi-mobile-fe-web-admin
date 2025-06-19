@@ -1,5 +1,5 @@
-import React, { useState, useContext, useMemo } from 'react';
-import { Table, Switch, Button, Image, Dropdown, } from 'antd';
+import React, { useState, useContext, useMemo, useEffect } from 'react';
+import { Table, Switch, Button, Image, Dropdown } from 'antd';
 import { HolderOutlined, MoreOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import type { DragEndEvent } from '@dnd-kit/core';
 import { DndContext } from '@dnd-kit/core';
@@ -8,6 +8,73 @@ import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
 import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import type { TableColumnsType } from 'antd';
+import { useNavigate } from 'react-router-dom';
+import UniversalDialog from './dialog';
+
+// ============ INDEXEDDB UTILITIES ============
+const DB_NAME = 'BannerDB';
+const DB_VERSION = 2;
+const STORE_NAME = 'banners';
+
+const openDB = (): Promise<IDBDatabase> => {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
+    
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve(request.result);
+    
+    request.onupgradeneeded = (event) => {
+      const db = (event.target as IDBOpenDBRequest).result;
+      
+      if (db.objectStoreNames.contains(STORE_NAME)) {
+        db.deleteObjectStore(STORE_NAME);
+      }
+      
+      const store = db.createObjectStore(STORE_NAME, { keyPath: 'front_id', autoIncrement: true });
+      store.createIndex('position', 'position', { unique: false });
+    };
+  });
+};
+
+const deleteBannerFromDB = async (front_id: number): Promise<void> => {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction([STORE_NAME], 'readwrite');
+    const store = transaction.objectStore(STORE_NAME);
+    const request = store.delete(front_id);
+    
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve();
+  });
+};
+
+const updateBannerStatusInDB = async (front_id: number, status: boolean): Promise<void> => {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction([STORE_NAME], 'readwrite');
+    const store = transaction.objectStore(STORE_NAME);
+    
+    // ดึงข้อมูลเดิมมาก่อน
+    const getRequest = store.get(front_id);
+    
+    getRequest.onsuccess = () => {
+      const banner = getRequest.result;
+      if (banner) {
+        // อัพเดตสถานะ
+        banner.status = status;
+        
+        // บันทึกกลับไป
+        const updateRequest = store.put(banner);
+        updateRequest.onsuccess = () => resolve();
+        updateRequest.onerror = () => reject(updateRequest.error);
+      } else {
+        reject(new Error('Banner not found'));
+      }
+    };
+    
+    getRequest.onerror = () => reject(getRequest.error);
+  });
+};
 
 // ============ TYPES & INTERFACES ============
 export interface TableDataModel {
@@ -24,6 +91,7 @@ export interface TableBodyModel {
 export interface TableModel {
   header: string[];
   body: TableBodyModel;
+  onDataChange?: () => void; // เพิ่ม callback สำหรับแจ้งเมื่อข้อมูลเปลี่ยน
 }
 
 // ============ DRAG CONTEXT ============
@@ -51,6 +119,7 @@ const DragHandle: React.FC = () => {
 // ============ DATA TYPE ============
 interface DataType {
   key: string;
+  front_id?: number;
   position: string;
   status: boolean;
   banner?: string;
@@ -145,11 +214,16 @@ const ActionsDropdown: React.FC<ActionsDropdownProps> = ({ record, onEdit, onDel
 };
 
 // ============ MAIN TABLE COMPONENT ============
-export const AntTable: React.FC<Omit<TableModel, 'header'>> = ({ body }) => {
+export const AntTable: React.FC<TableModel> = ({ body, onDataChange }) => {
+  const navigate = useNavigate();
+  const [dataSource, setDataSource] = useState<DataType[]>([]);
+  const [isDeleteDialogVisible, setIsDeleteDialogVisible] = useState(false);
+  const [selectedRecord, setSelectedRecord] = useState<DataType | null>(null);
 
-  const [dataSource, setDataSource] = useState<DataType[]>(() => 
-    body.data.map((item, index) => ({
+  useEffect(() => {
+    const newDataSource = body.data.map((item, index) => ({
       key: `row-${index}`,
+      front_id: parseInt(item.text[10]) || undefined,
       position: item.text[0] || '',
       status: item.text[1] === 'true' || item.text[1]?.includes('true'),
       banner: item.text[2] && item.text[2] !== 'banner' ? item.text[2] : undefined,
@@ -164,30 +238,103 @@ export const AntTable: React.FC<Omit<TableModel, 'header'>> = ({ body }) => {
       publishDate: item.text[9]?.split(' ')[0] || '31/12/2024',
       publishTime: item.text[9]?.split(' ')[1] || '20:00',
       onAction: item.function.onClick,
-    }))
-  );
+    }));
+    setDataSource(newDataSource);
+  }, [body.data]);
 
-  const handleStatusChange = (key: string, checked: boolean) => {
+  const handleStatusChange = async (key: string, checked: boolean) => {
+    // อัพเดตใน state ทันที
     setDataSource(prev => 
       prev.map(item => 
         item.key === key ? { ...item, status: checked } : item
       )
     );
+
+    // หา record ที่ต้องอัพเดต
+    const record = dataSource.find(item => item.key === key);
+    if (record && record.front_id) {
+      try {
+        // อัพเดตใน IndexedDB
+        await updateBannerStatusInDB(record.front_id, checked);
+        console.log('Status updated in IndexedDB:', record.front_id, checked);
+        
+        // แจ้ง parent component ให้ refresh ข้อมูล
+        if (onDataChange) {
+          onDataChange();
+        }
+      } catch (error) {
+        console.error('Error updating status in IndexedDB:', error);
+        // หากเกิดข้อผิดพลาด ให้ revert การเปลี่ยนแปลงใน UI
+        setDataSource(prev => 
+          prev.map(item => 
+            item.key === key ? { ...item, status: !checked } : item
+          )
+        );
+      }
+    }
   };
 
   const handleEdit = (record: DataType) => {
     console.log('Edit record:', record);
     
+    const editParams = new URLSearchParams({
+      mode: 'edit',
+      front_id: record.front_id?.toString() || '',
+      position: record.position,
+      status: record.status.toString(),
+      banner: record.banner || '',
+      url: record.url === '-' ? '' : record.url,
+      duration: record.duration.replace('(s)', ''),
+      createdBy: record.createdBy,
+      editedBy: record.editedBy,
+      createdAt: record.createdAt,
+      createdTime: record.createdTime,
+      updateAt: record.updateAt,
+      updateTime: record.updateTime,
+      publishDate: record.publishDate,
+      publishTime: record.publishTime,
+    });
+    
+    navigate(`/addbanner?${editParams.toString()}`);
+    
     if (record.onAction) {
       record.onAction();
     }
-   
   };
 
   const handleDelete = (record: DataType) => {
-    console.log('Delete record:', record);
+    setSelectedRecord(record);
+    setIsDeleteDialogVisible(true);
+  };
 
-    setDataSource(prev => prev.filter(item => item.key !== record.key));
+  const confirmDelete = async () => {
+    if (!selectedRecord) return;
+
+    try {
+      if (selectedRecord.front_id) {
+        await deleteBannerFromDB(selectedRecord.front_id);
+        console.log('Deleted from IndexedDB with front_id:', selectedRecord.front_id);
+      }
+      
+      setDataSource(prev => prev.filter(item => item.key !== selectedRecord.key));
+      
+      // แจ้ง parent component ให้ refresh ข้อมูล
+      if (onDataChange) {
+        onDataChange();
+      }
+      
+    } catch (error) {
+      console.error('Error deleting banner from IndexedDB:', error);
+      setDataSource(prev => prev.filter(item => item.key !== selectedRecord.key));
+    } finally {
+      setIsDeleteDialogVisible(false);
+      setSelectedRecord(null);
+    }
+  };
+
+  const cancelDelete = () => {
+    setIsDeleteDialogVisible(false);
+    setSelectedRecord(null);
   };
 
   const onDragEnd = ({ active, over }: DragEndEvent) => {
@@ -235,20 +382,14 @@ export const AntTable: React.FC<Omit<TableModel, 'header'>> = ({ body }) => {
       render: (banner?: string) => (
         <div className="flex justify-center">
           <div className="w-16 h-10 rounded overflow-hidden border border-gray-200">
-            {banner ? (
               <Image
                 src={banner}
                 alt="Banner"
                 width={64}
                 height={40}
                 style={{ objectFit: 'cover' }}
-                fallback="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA2NCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjQwIiBmaWxsPSJ1cmwoI3BhaW50MF9saW5lYXJfMF8xKSIvPgo8dGV4dCB4PSIzMiIgeT0iMjIiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMCIgZm9udC13ZWlnaHQ9ImJvbGQiIGZpbGw9IndoaXRlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5CQU5ORVI8L3RleHQ+CjxkZWZzPgo8bGluZWFyR3JhZGllbnQgaWQ9InBhaW50MF9saW5lYXJfMF8xIiB4MT0iMCIgeTE9IjAiIHgyPSI2NCIgeTI9IjQwIiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+CjxzdG9wIHN0b3AtY29sb3I9IiM4QjVDRjYiLz4KPHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjMzk4M0Y2Ii8+CjwvbGluZWFyR3JhZGllbnQ+CjwvZGVmcz4KPHN2Zz4K"
+                fallback="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA2NCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjQwIiBmaWxsPSJ1cmwoI3BhaW50MF9saW5lYXJfMF8xKSIvPgo8dGV4dCB4PSIzMiIgeT0iMjIiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMCIgZm9udC13ZWlnaHQ9ImJvbGQiIGZpbGw9IndoaXRlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5CQU5ORUI8L3RleHQ+CjxkZWZzPgo8bGluZWFyR3JhZGllbnQgaWQ9InBhaW50MF9saW5lYXJfMF8xIiB4MT0iMCIgeTE9IjAiIHgyPSI2NCIgeTI9IjQwIiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+CjxzdG9wIHN0b3AtY29sb3I9IiM4QjVDRjYiLz4KPHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjMzk4M0Y2Ii8+CjwvbGluZWFyR3JhZGllbnQ+CjwvZGVmcz4KPHN2Zz4K"
               />
-            ) : (
-              <div className="w-full h-full bg-gradient-to-r from-purple-500 to-blue-500 flex items-center justify-center text-white text-xs font-bold">
-                BANNER
-              </div>
-            )}
           </div>
         </div>
       ),
@@ -285,28 +426,28 @@ export const AntTable: React.FC<Omit<TableModel, 'header'>> = ({ body }) => {
       ),
     },
     {
-      title: 'Last Edited By',
-      dataIndex: 'lasteditedby',
-      key: 'lasteditedby',
+      title: 'EDITED BY',
+      dataIndex: 'editedBy',
+      key: 'editedBy',
       width: 100,
       render: (text: string) => (
         <span className="text-gray-900">{text}</span>
       ),
     },
     {
-      title: 'Created At',
+      title: 'CREATED AT',
       dataIndex: 'createdat',
       key: 'createdat',
       width: 100,
       render: (_, record) => (
         <div className="text-center">
-          <div className="text-gray-900 font-medium">{record.createdAt  }</div>
+          <div className="text-gray-900 font-medium">{record.createdAt}</div>
           <div className="text-gray-500 text-sm">{record.createdTime}</div>
         </div>
       ),
     },
     {
-      title: 'Update At',
+      title: 'UPDATED AT',
       dataIndex: 'updatedat',
       key: 'updatedat',
       width: 100,
@@ -382,6 +523,13 @@ export const AntTable: React.FC<Omit<TableModel, 'header'>> = ({ body }) => {
           />
         </SortableContext>
       </DndContext>
+      <UniversalDialog
+        type="delete"
+        visible={isDeleteDialogVisible}
+        onCancel={cancelDelete}
+        onDelete={confirmDelete}
+        imageUrl={selectedRecord?.banner}
+      />
     </div>
   );
 };
