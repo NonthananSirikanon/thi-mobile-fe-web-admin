@@ -12,6 +12,7 @@ interface UploadBannerProps {
   defaultPreview?: string;
   existingImageUrl?: string;
   initialFiles?: File[];
+  initialFile?: File | null;
 }
 
 export default function UploadBanner({
@@ -22,6 +23,7 @@ export default function UploadBanner({
   maxSize = 10,
   onFileChange,
   initialFiles = [],
+  initialFile,
 
   supportedFormats = ["jpeg", "jpg", "png", "svg"],
 }: UploadBannerProps) {
