@@ -8,55 +8,85 @@ import { Editor } from "primereact/editor";
 import { CategoryDropdown, type CategoryValue } from "../ui/dropdown";
 import { useNavigate } from "react-router-dom";
 import { useParams } from 'react-router-dom';
-import NewsAdminMenu from "../ui/news_menu";
 import NewsAdminLayout from "./add_news_layout";
+import { fetchNewsById } from "../service/newsService";
 
 function AddNews() {
   const { id } = useParams();
-  const [headline, setHeadline] = useState('');
-  const [isBannerActive, setIsBannerActive] = useState(false);
-  const [text, setText] = useState('');
+  const [title, setHeadline] = useState('');
+  const [status, setIsBannerActive] = useState(false);
+  const [content, setText] = useState('');
   const [category, setCategory] = useState<CategoryValue | undefined>();
-  const [bannerFile, setBannerFile] = useState<File | null>(null);
-  const DB_VERSION = 2;
-  const [newsType, setNewsType] = useState<string>("");
+  const [thumbnail, setBannerFile] = useState<File | null>(null);
+  const DB_VERSION = 5;
+  const [type, setNewsType] = useState<string>("");
+
+  function dataURLToFile(dataUrl: string, filename: string): File {
+  const arr = dataUrl.split(',');
+  const mime = arr[0].match(/:(.*?);/)![1];
+  const bstr = atob(arr[1]);
+  let n = bstr.length;
+  const u8arr = new Uint8Array(n);
+  while (n--) u8arr[n] = bstr.charCodeAt(n);
+  return new File([u8arr], filename, { type: mime });
+}
 
   useEffect(() => {
   if (id) {
-    const loadNewsDraft = async () => {
+    const numericId = Number(id);
+    
+    const loadData = async () => {
       const db = await openDB();
       const tx = db.transaction("news-drafts", "readonly");
       const store = tx.objectStore("news-drafts");
-      const request = store.get(Number(id)); 
+      const request = store.get(numericId);
 
-      request.onsuccess = () => {
-        const data = request.result;
-        if (data) {
-          setHeadline(data.headline);
-          setCategory(data.category);
-          setText(data.text);
-          setIsBannerActive(data.isBannerActive);
-          setNewsType(data.newsType);
+      request.onsuccess = async () => {
+        const draft = request.result;
 
-          if (data.bannerFile) {
-            fetch(data.bannerFile)
-              .then(res => res.blob())
-              .then(blob => {
-                const file = new File([blob], "banner.jpg", { type: "image/jpeg" });
-                setBannerFile(file);
-              });
+        if (draft) {
+          // ✅ กรณีข้อมูลอยู่ใน IndexedDB
+          setHeadline(draft.title);
+          setCategory(draft.category);
+          setText(draft.content);
+          setIsBannerActive(draft.status);
+          setNewsType(draft.type);
+
+          if (draft.thumbnail) {
+            const file = dataURLToFile(draft.thumbnail, "thumbnail.jpg");
+            setBannerFile(file);
+          }
+
+        } else {
+          try {
+            // ✅ กรณีโหลดจาก API
+            const apiNews = await fetchNewsById(numericId);
+            setHeadline(apiNews.title);
+            setCategory(apiNews.category?.categoryId || 0);
+            setText(apiNews.content);
+            setIsBannerActive(apiNews.status);
+            setNewsType(apiNews.type);
+            setBannerFile(null); // หรือแปลง URL ไป fetch Blob แล้วแปลงเป็น File ก็ได้
+
+            // ✅ หากอยาก preload thumbnail จาก URL เป็น File:
+            if (apiNews.thumbnail) {
+              const res = await fetch(apiNews.thumbnail);
+              const blob = await res.blob();
+              const file = new File([blob], "thumbnail.jpg", { type: blob.type });
+              setBannerFile(file);
+            }
+          } catch (err) {
+            console.error("โหลดข่าวจาก API ล้มเหลว:", err);
           }
         }
+
         db.close();
       };
     };
 
-    loadNewsDraft();
+    loadData();
   }
 }, [id]);
-
-  // แทนที่ saveImageToIndexedDB() และ openDBAndLoadImage() ให้ใช้ openDB()
-
 
   const handleFileChange = (files: File[]) => {
     if (files.length > 0) {
@@ -74,7 +104,7 @@ function AddNews() {
       request.onupgradeneeded = () => {
         const db = request.result;
         if (!db.objectStoreNames.contains("news-drafts")) {
-          db.createObjectStore("news-drafts", { keyPath: "id" });
+          db.createObjectStore("news-drafts", { keyPath: "front_id" });
         }
         if (!db.objectStoreNames.contains("images")) {
           db.createObjectStore("images", { keyPath: "key" });
@@ -89,7 +119,6 @@ function AddNews() {
         if (!db.objectStoreNames.contains("images")) missingStores.push("images");
 
         if (missingStores.length > 0) {
-          // ต้องเพิ่ม version ทีละ 1 จาก db.version (เช่น 2 เป็น 3)
           db.close();
           const newVersion = db.version + 1;
 
@@ -98,7 +127,7 @@ function AddNews() {
           upgradeRequest.onupgradeneeded = () => {
             const upgradedDB = upgradeRequest.result;
             if (!upgradedDB.objectStoreNames.contains("news-drafts")) {
-              upgradedDB.createObjectStore("news-drafts", { keyPath: "id" });
+              upgradedDB.createObjectStore("news-drafts", { keyPath: "front_id" });
             }
             if (!upgradedDB.objectStoreNames.contains("images")) {
               upgradedDB.createObjectStore("images", { keyPath: "key" });
@@ -120,20 +149,26 @@ function AddNews() {
   const saveNewsToIndexedDB = async () => {
     const db = await openDB();
 
-    const now = new Date().toISOString(); // วันที่และเวลาปัจจุบัน
+    const now = new Date().toISOString();
 
-    const newsId = id ? parseInt(id, 10) : Date.now();
+    const isEditMode = Boolean(id);
+    const frontId = isEditMode ? parseInt(id!, 10) : Date.now();
 
     const newsData = {
-      id: newsId,
-      headline,
-      category: category ?? '',
-      text,
-      isBannerActive,
-      bannerFile: null as string | null,
-      newsType,
+      front_id: frontId,
+      newsId: 0,
+      title,
+      categoryId: category ?? 0,
+      agencyId: category ?? 0,
+      content,
+      status,
+      thumbnail: null as string | null,
+      type,
       createdAt: now,
       updatedAt: now,
+      createdBy: 2,
+      updatedBy: 2,
+      deletedBy: 0,
     };
 
     return new Promise<void>((resolve, reject) => {
@@ -141,7 +176,7 @@ function AddNews() {
         const tx = db.transaction("news-drafts", "readwrite");
         const store = tx.objectStore("news-drafts");
 
-        const existingRequest = store.get(newsData.id);
+        const existingRequest = store.get(frontId);
         existingRequest.onsuccess = () => {
           const existing = existingRequest.result;
           if (existing) {
@@ -157,19 +192,17 @@ function AddNews() {
           tx.onerror = () => reject(tx.error);
         };
 
-        existingRequest.onerror = () => {
-          reject(existingRequest.error);
-        };
+        existingRequest.onerror = () => reject(existingRequest.error);
       };
 
-      if (bannerFile) {
+      if (thumbnail) {
         const reader = new FileReader();
         reader.onload = () => {
-          newsData.bannerFile = reader.result as string;
+          newsData.thumbnail = reader.result as string;
           completeSave();
         };
         reader.onerror = () => reject(reader.error);
-        reader.readAsDataURL(bannerFile);
+        reader.readAsDataURL(thumbnail);
       } else {
         completeSave();
       }
@@ -189,64 +222,63 @@ function AddNews() {
   };
 
   return (
-    <div className="space-y-6">
-      <NewsAdminLayout>
-
-      <div className="md:basis-2/5 w-full h-full">
-        <UploadBanner
-          required
-          maxSize={5}
-          onFileChange={handleFileChange}
-          initialFile={bannerFile}
-        />
-      </div>
-
-      <div>
-        <RadioGroup
-          required
-          value={newsType}
-          onChange={(value) => setNewsType(value)}
-        />
-      </div>
-
-      <div className="flex flex-col md:flex-row md:items-stretch md:space-x-4 space-y-4 md:space-y-0">
-        <div className="md:basis-2/6 w-full space-y-4">
-          <CategoryDropdown
-            value={category}
-            onChange={setCategory}
-            label="Select news type"
-            placeholder="News Type"
+    <NewsAdminLayout>
+      <div className="space-y-6">
+        <div className="md:basis-2/5 w-full h-full">
+          <UploadBanner
+            required
+            maxSize={5}
+            onFileChange={handleFileChange}
+            initialFile={thumbnail}
           />
         </div>
-        <div className="md:basis-4/6 w-full h-full">
-          <HeadlineInput
-            value={headline}
-            onChange={(e) => setHeadline(e.target.value)}
+
+        <div>
+          <RadioGroup
+            required
+            value={type}
+            onChange={(value) => setNewsType(value)}
           />
         </div>
-      </div>
 
-      <div className="card">
-        <Editor
-          value={text}
-          onTextChange={(e) => setText(e.htmlValue ?? '')}
-          style={{ height: '520px' }}
-        />
-      </div>
-
-      <div>
-        <BannerToggle
-          checked={isBannerActive}
-          onChange={setIsBannerActive}
-          showLabel
-        />
-        <div className="mt-16 flex justify-end gap-5">
-          <ActionButton type="cancel" onClick={() => console.log('Cancel clicked')} />
-          <ActionButton type="save" onClick={handleSave} />
+        <div className="flex flex-col md:flex-row md:items-stretch md:space-x-4 space-y-4 md:space-y-0">
+          <div className="md:basis-2/6 w-full space-y-4">
+            <CategoryDropdown
+              value={category}
+              onChange={setCategory}
+              label="Select news type"
+              placeholder="News Type"
+            />
+          </div>
+          <div className="md:basis-4/6 w-full h-full">
+            <HeadlineInput
+              value={title}
+              onChange={(e) => setHeadline(e.target.value)}
+            />
+          </div>
         </div>
-      </div>
-      </NewsAdminLayout>
+
+        <div className="card">
+          <Editor
+            value={content}
+            onTextChange={(e) => setText(e.htmlValue ?? '')}
+            style={{ height: '520px' }}
+          />
+        </div>
+
+        <div>
+          <BannerToggle
+            checked={status}
+            onChange={setIsBannerActive}
+            showLabel
+          />
+          <div className="mt-16 flex justify-end gap-5">
+            <ActionButton type="cancel" onClick={() => console.log('Cancel clicked')} />
+            <ActionButton type="save" onClick={handleSave} />
+          </div>
+        </div>
     </div>
+    </NewsAdminLayout>
   );
 }
 
