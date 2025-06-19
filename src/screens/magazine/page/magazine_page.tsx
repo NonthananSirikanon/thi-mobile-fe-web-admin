@@ -1,14 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
-import '../news.css';
+import '../magazine.css';
 import StatusToggle from '../ui/statustoggle';
 import ActionButton from '../ui/actionbutton';
 import { Link } from 'react-router-dom';
 import { AntTable, type TableModel } from '../ui/table';
 import SearchMenu from '../ui/search_menu';
-import NewsTabSelector from '../ui/news_tab';
 import { useNavigate } from 'react-router-dom';
-import { fetchNewsFromAPI } from '../service/newsService';
-
 
 async function getAllNewsFromIndexedDB(): Promise<any[]> {
   return new Promise((resolve, reject) => {
@@ -18,8 +15,8 @@ async function getAllNewsFromIndexedDB(): Promise<any[]> {
 
     request.onsuccess = () => {
       const db = request.result;
-      const tx = db.transaction('news-drafts', 'readonly');
-      const store = tx.objectStore('news-drafts');
+      const tx = db.transaction('magazine-drafts', 'readonly');
+      const store = tx.objectStore('magazine-drafts');
       const getAll = store.getAll();
 
       getAll.onsuccess = () => resolve(getAll.result);
@@ -34,8 +31,8 @@ export const deleteNewsFromIndexedDB = async (id: string): Promise<void> => {
 
     request.onsuccess = (event) => {
       const db = request.result;
-      const transaction = db.transaction(['news-drafts'], 'readwrite');
-      const objectStore = transaction.objectStore('news-drafts');
+      const transaction = db.transaction(['magazine-drafts'], 'readwrite');
+      const objectStore = transaction.objectStore('magazine-drafts');
       const deleteRequest = objectStore.delete(id);
 
       deleteRequest.onsuccess = () => {
@@ -53,77 +50,64 @@ export const deleteNewsFromIndexedDB = async (id: string): Promise<void> => {
   });
 };
 
-function NewsPage() {
+function MagazinePage() {
   const [newsList, setNewsList] = useState<any[]>([]);
   const [isActive, setIsActive] = useState(true);
-  const [selectedTab, setSelectedTab] = useState<'hotNews' | 'featureNews'>('hotNews');
   const navigate = useNavigate();
-  const [searchKeyword, setSearchKeyword] = useState('');
 
-  const handleEdit = (id: string) => {
-    navigate(`/addnews/${id}`);
+  const handleEdit = (front_id: string) => {
+    navigate(`/addMagazine/${front_id}`);
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (front_id: string) => {
     try {
-      await deleteNewsFromIndexedDB(id);
-      const newList = newsList.filter((item) => item.id.toString() !== id.toString());
+      await deleteNewsFromIndexedDB(front_id);
+      const newList = newsList.filter((item) => item.front_id.toString() !== front_id.toString());
       setNewsList(newList);
     } catch (error) {
       console.error('ลบข่าวไม่สำเร็จ:', error);
     }
   };
 
+
   useEffect(() => {
     getAllNewsFromIndexedDB()
-      .then((indexedNews) => {
-        console.log('✅ ข่าวจาก IndexedDB:', indexedNews);
-        setNewsList(indexedNews);
-        return fetchNewsFromAPI();
+      .then((news) => {
+        console.log("✅ ข่าวจาก IndexedDB:", news);
+        setNewsList(news);
       })
-      .then((apiNews) => {
-        console.log('✅ ข่าวจาก API:', apiNews);
-        setNewsList((prev) => [...prev, ...apiNews]);
-      })
-      .catch((err) => {
-        console.error('โหลดข่าวล้มเหลว:', err);
-      });
+      .catch((err) => console.error('Failed to load news from IndexedDB:', err));
   }, []);
 
   const filteredNews = useMemo(() => {
-    return newsList.filter((item) => {
-      const tabMatch =
-        (selectedTab === 'hotNews' && item.type === 'Hotnews') ||
-        (selectedTab === 'featureNews' && item.type === 'Featurenews');
-
-      const statusMatch = item.status === isActive;
-
-      return tabMatch && statusMatch;
-    });
-  }, [selectedTab, isActive, newsList]);
+  return newsList.filter(() => {
+    return true;
+  });
+}, [newsList]);
 
   const tableData: TableModel = {
-    header: ['#', 'Status', 'Headline', 'Type', 'Created At', 'Updated At', 'Actions'],
+    header: ['#', 'Status', 'Cover Image', 'Issue Number','Created By', 'Last Edited By', 'Created At','Update At' , 'Reading Volume','Likes' ,'Comments' ,'Shares' ,'Publish', 'Actions'],
     body: {
       data: filteredNews.map((item, index) => ({
-        key: item.front_id || item.newsId,
+        key: item.front_id,
         front_id: item.front_id,
-        id: item.id || item.newsId,
+        id: item.id,
         title: item.title || '',
-        content: item.text || '',
-        type: item.type || '',
-        categoryId: item.category || 0,
-        agencyId: item.agency || 0,
+        pdfMagazine:  item.pdfMagazine || '',
         text: [
-          (index + 1).toString(),
-          item.status?.toString() || 'false',
-          item.thumbnail || '',
-          item.createdBy?.toString() || '0',
-          item.updatedBy?.toString() || '0',
+          (index + 1).toString(),   
+          item.isBannerActive?.toString() || '',
+          item.bannerFile || '',            
+          item.issueNum || '',  
+          item.createdBy || 'Admin',     
+          item.lastEditedBy || 'Admin',
           item.createdAt || '',
           item.updatedAt || '',
-          item.title || '',
-          `${item.publishDateTime || ''}`
+          item.readVolume || 0,
+          item.likes || 0,
+          item.comments || 0,
+          item.shares || 0,
+          item.publishAt || '',
         ],
 
         function: {
@@ -135,22 +119,18 @@ function NewsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="mt-4">
-        <NewsTabSelector selected={selectedTab} onChange={setSelectedTab} />
-      </div>
-
       <div className="flex justify-between items-center p-4 w-full">
         <div className="flex-none">
-          <StatusToggle checked={isActive}   onChange={(checked) => setIsActive(checked)} />
+          <StatusToggle checked={isActive} onChange={setIsActive} />
         </div>
 
         <div className="flex-grow flex justify-center items-center px-4">
-          <SearchMenu onSearch={(keyword) => setSearchKeyword(keyword)} />
+          <SearchMenu />
         </div>
 
         <div className="flex flex-wrap gap-4 justify-end flex-none">
-          <Link to="/addnews">
-            <ActionButton type="addBanner" onClick={() => console.log('Add Banner clicked')} />
+          <Link to="/addMagazine">
+            <ActionButton type="addNewIssue" onClick={() => console.log('Add Banner clicked')} />
           </Link>
           <ActionButton type="publish" onClick={() => console.log('Publish clicked')} />
         </div>
@@ -167,4 +147,4 @@ function NewsPage() {
   );
 }
 
-export default NewsPage;
+export default MagazinePage;

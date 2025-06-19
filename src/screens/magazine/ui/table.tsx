@@ -1,6 +1,6 @@
 import React, { useState, useContext, useMemo, useEffect } from 'react';
 import { Table, Switch, Button, Image, Dropdown, Modal, } from 'antd';
-import { HolderOutlined, MoreOutlined, EditOutlined, DeleteOutlined, EyeOutlined } from '@ant-design/icons';
+import { HolderOutlined, MoreOutlined, EditOutlined, DeleteOutlined, EyeOutlined, CheckOutlined, CloseOutlined, EditFilled } from '@ant-design/icons';
 import type { DragEndEvent } from '@dnd-kit/core';
 import { DndContext } from '@dnd-kit/core';
 import type { SyntheticListenerMap } from '@dnd-kit/core/dist/hooks/utilities';
@@ -8,16 +8,17 @@ import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
 import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import type { TableColumnsType } from 'antd';
+import { InputNumber } from 'antd';
 
-// ============ TYPES & INTERFACES ============
+
 export interface TableDataModel {
-  id: string;
   text: string[];
   function: {
     onClick?: () => void;
   };
-  headline?: string;
+  title?: string;
   newsType?: string;
+  front_id: string
 }
 
 interface AntTableProps extends Omit<TableModel, 'header'> {
@@ -34,7 +35,6 @@ export interface TableModel {
   body: TableBodyModel;
 }
 
-// ============ DRAG CONTEXT ============
 interface RowContextProps {
   setActivatorNodeRef?: (element: HTMLElement | null) => void;
   listeners?: SyntheticListenerMap;
@@ -52,23 +52,41 @@ const formatDateTime = (datetime: string): string => {
 };
 
 const toDataType = (item: TableDataModel, index: number): DataType => {
-  const [position, status, banner, createdBy, lastEditedBy, createdAt, updatedAt, , , publish] = item.text;
-  const [publishDate, publishTime] = publish?.split(' ') || ['--', '--'];
+  const [
+    position,
+    status,
+    banner,
+    issueNum,
+    createdBy,
+    lastEditedBy,
+    createdAt,
+    updatedAt,
+    readVolume,
+    likes,
+    comments,
+    shares,
+    publishAt
+  ] = item.text;
 
   return {
-    key: item.id,
-    position: position,
+    key: item.front_id!,
+    front_id: item.front_id,
+    position,
     status: status === 'true',
-    banner: banner,
-    createdBy: createdBy,
-    lastEditedBy: lastEditedBy,
-    createdAt: createdAt,
-    updatedAt: updatedAt,
-    publishDate: publishDate,
-    publishTime: publishTime,
-    headline: item.headline ?? '',
+    banner,
+    createdBy,
+    lastEditedBy,
+    createdAt,
+    updatedAt,
+    publishAt,
+    title: item.title ?? '',
     newsType: item.newsType ?? '',
     onAction: item.function.onClick,
+    issueNum,
+    readVolume: Number(readVolume),
+    likes: Number(likes),
+    comments: Number(comments),
+    shares: Number(shares),
   };
 };
 
@@ -89,9 +107,9 @@ const DragHandle: React.FC = () => {
   );
 };
 
-// ============ DATA TYPE ============
 interface DataType {
   key: string;
+  front_id: string;
   position: string;
   status: boolean;
   banner?: string;
@@ -99,15 +117,19 @@ interface DataType {
   lastEditedBy: string;
   createdAt: string;
   updatedAt: string;
-  publishDate: string;
-  publishTime: string;
+  publishAt: string;
   onAction?: () => void;
-  headline?: string;
+  title?: string;
   newsType: string;
+
+  issueNum?: string;
+  readVolume?: number;
+  likes?: number;
+  comments?: number;
+  shares?: number;
 }
 
 
-// ============ ROW COMPONENT ============
 interface RowProps extends React.HTMLAttributes<HTMLTableRowElement> {
   'data-row-key': string;
 }
@@ -144,7 +166,6 @@ const Row: React.FC<RowProps> = (props) => {
   );
 };
 
-// ============ ACTIONS DROPDOWN COMPONENT ============
 interface ActionsDropdownProps {
   record: DataType;
   onEdit: (record: DataType) => void;
@@ -191,7 +212,6 @@ const ActionsDropdown: React.FC<ActionsDropdownProps & { onPreview: (record: Dat
 };
 
 
-// ============ MAIN TABLE COMPONENT ============
 export const AntTable: React.FC<AntTableProps> = ({ body, onEdit, onDelete }) => {
 
   const [previewImageUrl, setPreviewImageUrl] = useState<string | undefined>(undefined);
@@ -202,6 +222,7 @@ export const AntTable: React.FC<AntTableProps> = ({ body, onEdit, onDelete }) =>
 
 
   const handlePreview = (record: DataType) => {
+    console.log('Preview record:', record);
     setPreviewImageUrl(record.banner);
     setPreviewRecord(record);
     setIsPreviewVisible(true);
@@ -211,7 +232,6 @@ export const AntTable: React.FC<AntTableProps> = ({ body, onEdit, onDelete }) =>
     return body.data.map((item, index) => toDataType(item, index));
   }, [body.data]);
 
-  // Transform data from TableDataModel to DataType
   useEffect(() => {
     setDataSource(mappedData);
   }, [mappedData]);
@@ -232,6 +252,67 @@ export const AntTable: React.FC<AntTableProps> = ({ body, onEdit, onDelete }) =>
     onDelete?.(record);
   };
 
+  const [editingRow, setEditingRow] = useState<string | null>(null);
+  const [tempVolume, setTempVolume] = useState<number>(0);
+
+  const handleSave = (record: DataType) => {
+    const updated = dataSource.map((item) =>
+      item.front_id === record.front_id
+        ? { ...item, readVolume: tempVolume }
+        : item
+    );
+
+    setDataSource(updated);
+    setEditingRow(null);
+
+    const dbRequest = indexedDB.open("MyDB", 5);
+
+    dbRequest.onsuccess = () => {
+      const db = dbRequest.result;
+      const tx = db.transaction("magazine-drafts", "readwrite");
+      const store = tx.objectStore("magazine-drafts");
+
+      // ดึงข้อมูลเดิมจาก store ก่อน
+      const getRequest = store.get(record.front_id);
+
+      getRequest.onsuccess = () => {
+        const originalItem = getRequest.result;
+
+        if (originalItem) {
+          const updatedItem = updated.find(item => item.front_id === record.front_id);
+          if (updatedItem) {
+            const { onAction, ...safeItem } = updatedItem;
+
+            // รวมข้อมูลเดิมเข้ากับข้อมูลใหม่
+            const mergedItem = {
+              ...originalItem,
+              ...safeItem, // ค่านี้จะ override original
+            };
+
+            // รองรับ bannerFile → banner ถ้า banner ยังไม่มี
+            if (!mergedItem.banner && mergedItem.bannerFile) {
+              mergedItem.banner = mergedItem.bannerFile;
+            }
+
+            const putRequest = store.put(mergedItem);
+
+            putRequest.onsuccess = () => {
+              console.log("✅ Updated and saved to IndexedDB:", mergedItem);
+            };
+
+            putRequest.onerror = () => {
+              console.error("❌ Failed to save:", putRequest.error);
+            };
+          }
+        }
+      };
+
+      getRequest.onerror = () => {
+        console.error("❌ Failed to get original item:", getRequest.error);
+      };
+    };
+  };
+
   const onDragEnd = ({ active, over }: DragEndEvent) => {
     if (active.id !== over?.id) {
       setDataSource((prevState) => {
@@ -247,7 +328,7 @@ export const AntTable: React.FC<AntTableProps> = ({ body, onEdit, onDelete }) =>
       title: 'POSITION',
       dataIndex: 'position',
       key: 'position',
-      width: 100,
+      width: 50,
       render: () => (
         <div className="flex items-center gap-2">
           <DragHandle />
@@ -269,25 +350,28 @@ export const AntTable: React.FC<AntTableProps> = ({ body, onEdit, onDelete }) =>
       ),
     },
     {
-      title: 'COVER IMAGE',
+      title: 'COVER',
       dataIndex: 'banner',
       key: 'banner',
-      width: 120,
+      width: 80,
       align: 'center',
       render: (banner?: string) => (
         <div className="flex justify-center">
-          <div className="w-16 h-10 rounded overflow-hidden border border-gray-200">
+          <div className="rounded overflow-hidden border border-gray-200" style={{ width: 65, height: 95 }}>
             {banner ? (
               <Image
                 src={banner}
                 alt="Banner"
-                width={64}
-                height={40}
+                preview={false}
+                width={65}
+                height={95}
                 style={{ objectFit: 'cover' }}
-                fallback="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA2NCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjQwIiBmaWxsPSJ1cmwoI3BhaW50MF9saW5lYXJfMF8xKSIvPgo8dGV4dCB4PSIzMiIgeT0iMjIiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMCIgZm9udC13ZWlnaHQ9ImJvbGQiIGZpbGw9IndoaXRlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5CQU5ORVI8L3RleHQ+CjxkZWZzPgo8bGluZWFyR3JhZGllbnQgaWQ9InBhaW50MF9saW5lYXJfMF8xIiB4MT0iMCIgeTE9IjAiIHgyPSI2NCIgeTI9IjQwIiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+CjxzdG9wIHN0b3AtY29sb3I9IiM4QjVDRjYiLz4KPHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjMzk4M0Y2Ii8+CjwvbGluZWFyR3JhZGllbnQ+CjwvZGVmcz4KPHN2Zz4K"
               />
             ) : (
-              <div className="w-full h-full bg-gradient-to-r from-purple-500 to-blue-500 flex items-center justify-center text-white text-xs font-bold">
+              <div
+                style={{ width: '100%', height: '100%' }}
+                className="bg-gradient-to-r from-purple-500 to-blue-500 flex items-center justify-center text-white text-xs font-bold"
+              >
                 COVER IMAGE
               </div>
             )}
@@ -296,51 +380,112 @@ export const AntTable: React.FC<AntTableProps> = ({ body, onEdit, onDelete }) =>
       ),
     },
     {
+      title: 'ISSUE NUMBER',
+      dataIndex: 'issueNum',
+      key: 'issueNum',
+      width: 110,
+      align: 'center',
+      render: (issue: string) => <span>Issue #{issue || '-'}</span>,
+    },
+    {
       title: 'CREATED BY',
       dataIndex: 'createdBy',
       key: 'createdBy',
       width: 120,
-      render: (text: string) => (
-        <span className="">{text}</span>
-      ),
+      render: (text: string) => <span>{text}</span>,
     },
     {
       title: 'LAST EDITED BY',
       dataIndex: 'lastEditedBy',
       key: 'lastEditedBy',
       width: 120,
-      render: (text: string) => (
-        <span className="">{text}</span>
-      ),
+      render: (text: string) => <span>{text}</span>,
     },
     {
       title: 'CREATED AT',
-      key: 'createAt',
-      width: 150,
-      render: (_, record) => (
-        <div className="flex">
-          <div className="text-sm">{formatDateTime(record.createdAt)}</div>
-        </div>
-      ),
+      dataIndex: 'createdAt',
+      key: 'createdAt',
+      width: 125,
+      render: (text: string) => <span>{formatDateTime(text)}</span>,
     },
     {
       title: 'UPDATE AT',
-      key: 'updateAt',
-      width: 150,
-      render: (_, record) => (
-        <div className="flex">
-          <div className="text-sm">{formatDateTime(record.updatedAt)}</div>
-        </div>
-      ),
+      dataIndex: 'updatedAt',
+      key: 'updatedAt',
+      width: 125,
+      render: (text: string) => <span>{formatDateTime(text)}</span>,
+    },
+    {
+      title: 'READING VOLUME',
+      dataIndex: 'readVolume',
+      key: 'readVolume',
+      width: 130,
+      align: 'center',
+      render: (_value: number, record: any) => {
+        const isEditing = editingRow === record.front_id;
+        return isEditing ? (
+          <div className="flex gap-1 items-center">
+            <InputNumber
+              style={{ width: 60, fontSize: 12, borderColor: '#2962FF' }}
+              min={0}
+              value={tempVolume}
+              onChange={(val) => setTempVolume(val ?? 0)}
+              size="small"
+            />
+            <CheckOutlined
+              onClick={() => handleSave(record)}
+              className="text-[10px] cursor-pointer border border-gray-600 rounded-md p-1 hover:bg-gray-500 hover:text-white"
+            />
+            <CloseOutlined onClick={() => setEditingRow(null)}
+              className="text-[10px] cursor-pointer border border-gray-600 rounded-md p-1 hover:bg-gray-500 hover:text-white"
+            />
+          </div>
+        ) : (
+          <div className="flex gap-2 items-center justify-center text-orange-600">
+            <div className='text-blue-500 bg-blue-200 p-1 rounded w-20 text-xs'>
+              {record.readVolume ?? 0}
+            </div>
+            <EditFilled
+              className="cursor-pointer text-ms"
+              onClick={() => {
+                setEditingRow(record.front_id);
+                setTempVolume(record.readVolume ?? 0);
+              }}
+            />
+          </div>
+        );
+      }
+    },
+    {
+      title: 'LIKES',
+      dataIndex: 'likes',
+      key: 'likes',
+      width: 80,
+      align: 'center',
+      render: (value?: number) => <span>{value ?? 0}</span>,
+    },
+    {
+      title: 'COMMENTS',
+      dataIndex: 'comments',
+      key: 'comments',
+      width: 90,
+      align: 'center',
+      render: (value?: number) => <span>{value ?? 0}</span>,
+    },
+    {
+      title: 'SHARES',
+      dataIndex: 'shares',
+      key: 'shares',
+      width: 80,
+      align: 'center',
+      render: (value?: number) => <span>{value ?? 0}</span>,
     },
     {
       title: 'PUBLISH',
-      key: 'publishDate',
+      key: 'publish',
       width: 130,
       render: (_, record) => (
-        <div className="flex">
-          <div className="text-sm">{formatDateTime(record.publishDate)}</div>
-        </div>
+        <div className="text-sm">{formatDateTime(record.publishAt)}</div>
       ),
     },
     {
@@ -360,9 +505,7 @@ export const AntTable: React.FC<AntTableProps> = ({ body, onEdit, onDelete }) =>
   ];
 
   const renderPreviewModal = () => {
-    if (!previewRecord || !['HotNews', 'FeatureNews'].includes(previewRecord.newsType)) return null;
-
-    if (previewRecord.newsType === 'FeatureNews') {
+    if (previewRecord) {
       return (
         <Modal
           open={isPreviewVisible}
@@ -372,16 +515,17 @@ export const AntTable: React.FC<AntTableProps> = ({ body, onEdit, onDelete }) =>
         >
           <div className='font-bold text-[18px]'>Preview</div>
           <div
-            style={{ position: 'relative', width: '310px', height: '175px', margin: '20px auto' }}
+            style={{ position: 'relative', width: '130px', height: '210px', margin: '20px auto' }}
           >
             <div
               style={{
+                border: 'solid 1px #ccc',
                 position: 'absolute',
                 bottom: 0,
                 left: 0,
                 width: '100%',
-                height: '40%',
-                background: 'linear-gradient(to top, rgba(0, 0, 0, 0.9), transparent)',
+                height: '30%',
+                background: 'linear-gradient(to top, rgb(255, 255, 255), transparent)',
                 zIndex: 1,
                 borderBottomLeftRadius: '4px',
                 borderBottomRightRadius: '4px',
@@ -393,26 +537,28 @@ export const AntTable: React.FC<AntTableProps> = ({ body, onEdit, onDelete }) =>
                 bottom: 0,
                 left: 0,
                 width: '100%',
-                color: 'white',
                 padding: '0 0 10px 15px',
                 fontSize: '14px',
                 fontWeight: '500',
                 zIndex: 2,
                 wordWrap: 'break-word',
-                lineHeight: '1.3',
               }}
             >
-              {previewRecord.headline ?? 'Header'}
+              <div>{previewRecord.title ?? 'Header'}</div>
+              <div style={{
+                fontSize: '12px',
+                fontWeight: '400',
+              }}>Issue {previewRecord.issueNum ?? 'Issue Number'}</div>
             </div>
             {previewImageUrl ? (
               <Image
                 src={previewImageUrl}
-                alt={previewRecord.headline ?? 'Header'}
-                width={310}
-                height={175}
+                alt={previewRecord.title ?? 'Header'}
+                width={130}
+                height={145}
                 style={{
-                  width: '310px',
-                  height: '175px',
+                  width: '130px',
+                  height: '145px',
                   objectFit: 'cover',
                   display: 'block',
                 }}
@@ -420,8 +566,8 @@ export const AntTable: React.FC<AntTableProps> = ({ body, onEdit, onDelete }) =>
             ) : (
               <div
                 style={{
-                  width: '310px',
-                  height: '175px',
+                  width: '130px',
+                  height: '145px',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -438,79 +584,7 @@ export const AntTable: React.FC<AntTableProps> = ({ body, onEdit, onDelete }) =>
         </Modal>
       );
     }
-
-    // ✅ FeatureNews แบบใหม่
-    if (previewRecord.newsType === 'HotNews') {
-      return (
-        <Modal
-          open={isPreviewVisible}
-          footer={null}
-          onCancel={() => setIsPreviewVisible(false)}
-          centered
-        >
-          <div className="font-bold text-[18px] mb-4">Preview</div>
-
-          <div
-            className="flex gap-4"
-            style={{ width: '100%', maxWidth: '600px', margin: '20px auto', padding: 25, alignItems: 'flex-start' }}
-          >
-            <div className="w-2/3 h-[90px] flex flex-col justify-between py-1">
-              <div className="text-[14px]">
-                {previewRecord.headline ?? 'Header'}
-              </div>
-
-              <div className="text-[12px] text-gray-500 flex items-center gap-4">
-                <span className="flex items-center gap-1">
-                  <EyeOutlined /> {0}
-                </span>
-                <span className="border-l border-gray-300 pl-2 ml-2">
-                  {previewRecord.publishDate} {previewRecord.publishTime}
-                </span>
-              </div>
-
-            </div>
-
-
-            {/* Right Side: Image */}
-            <div className='w-1/3'>
-              {previewImageUrl ? (
-                <Image
-                  src={previewImageUrl}
-                  alt={previewRecord.headline ?? 'Header'}
-                  width={140}
-                  height={100}
-                  style={{
-                    objectFit: 'cover',
-                    display: 'block',
-                  }}
-                />
-              ) : (
-                <div
-                  style={{
-                    width: '310px',
-                    height: '175px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '16px',
-                    color: '#999',
-                    backgroundColor: '#f5f5f5',
-                    borderRadius: '4px',
-                  }}
-                >
-                  ไม่มีรูป
-                </div>
-              )}
-            </div>
-          </div>
-        </Modal>
-      );
-    }
-
-    return null;
-  };
-
-
+  }
 
   return (
     <div className="bg-white shadow-sm rounded-lg overflow-hidden">

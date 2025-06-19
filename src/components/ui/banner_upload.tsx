@@ -9,7 +9,9 @@ interface UploadBannerProps {
   maxSize?: number;
   onFileChange?: (fileList: File[]) => void;
   supportedFormats?: string[];
-  initialFile?: File | null; // Add this prop
+  defaultPreview?: string;
+  existingImageUrl?: string;
+  initialFiles?: File[];
 }
 
 export default function UploadBanner({
@@ -19,8 +21,9 @@ export default function UploadBanner({
   required = false,
   maxSize = 10,
   onFileChange,
+  initialFiles = [],
+
   supportedFormats = ["jpeg", "jpg", "png", "svg"],
-  initialFile, // Add this prop
 }: UploadBannerProps) {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [imageUrl, setImageUrl] = useState<string>("");
@@ -31,6 +34,16 @@ export default function UploadBanner({
   const [dragActive, setDragActive] = useState(false);
   const [error, setError] = useState<string | null>(null); // ✅ error state
   const [errorMessage, setErrorMessage] = useState<string>("");
+
+
+  useEffect(() => {
+    if (initialFiles.length > 0) {
+      const file = initialFiles[0];
+      const url = URL.createObjectURL(file);
+      setUploadedFile(file);
+      setImageUrl(url);
+    }
+  }, [initialFiles]);
 
   const formatFileSize = (bytes: number): string => {
     if (bytes === 0) return "0 Bytes";

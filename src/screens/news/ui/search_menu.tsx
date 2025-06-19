@@ -1,15 +1,20 @@
-import React from 'react';
 import { Input } from 'antd';
 import { SearchOutlined } from '@ant-design/icons';
 
-const SearchMenu: React.FC = () => (
+type Props = {
+  onSearch: (value: string) => void;
+};
+
+function SearchMenu({ onSearch }: Props) {
+  return (
     <Input
       placeholder="Search"
-      style={{ width: '80%'}}
+      style={{ width: '80%' }}
       addonBefore={<SearchOutlined />}
+      onChange={(e) => onSearch(e.target.value)}
       allowClear
-      size="large" 
-    />
-);
+      size="large" />
+  );
+}
 
 export default SearchMenu;

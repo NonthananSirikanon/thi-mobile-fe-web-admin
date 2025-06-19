@@ -3,6 +3,7 @@ import { Input } from 'antd';
 
 interface URLInputProps {
   initialValue?: string;
+  value?: string;
   onChange?: (url: string) => void;
   placeholder?: string;
   label?: string;
@@ -10,11 +11,13 @@ interface URLInputProps {
 
 export const URLInput: React.FC<URLInputProps> = ({
   initialValue = '',
+  value,
   onChange,
-  placeholder = 'https://www.example.com',
+  placeholder = 'https://www.example.com', 
   label = 'URL'
 }) => {
-  const [value, setValue] = useState(initialValue);
+  const [internalValue, setInternalValue] = useState(initialValue);
+
   const [error, setError] = useState(false);
 
   // ตรวจ URL ด้วย regex
@@ -22,27 +25,35 @@ export const URLInput: React.FC<URLInputProps> = ({
     return /^https?:\/\/[\w.-]+\.[a-z]{2,}(\/.*)?$/i.test(url);
   };
 
-  // ตรวจแบบไดนามิกเมื่อพิมพ์
+  // อัปเดตเมื่อ props.value เปลี่ยน
+  useEffect(() => {
+    if (value !== undefined) {
+      setInternalValue(value);
+      setError(!validateURL(value));
+    }
+  }, [value]);
+
+  // ตรวจค่าที่รับมาตอนเริ่มต้น
+  useEffect(() => {
+    if (initialValue && value === undefined) {
+      setError(!validateURL(initialValue));
+    }
+  }, [initialValue, value]);
+
+  // ตรวจ URL ขณะพิมพ์
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
-    setValue(newValue);
+    setInternalValue(newValue);
     const isValid = validateURL(newValue);
     setError(!isValid);
     if (onChange) onChange(newValue);
   };
 
-  // ตรวจค่าที่รับมาตอนเริ่มต้น
-  useEffect(() => {
-    if (initialValue) {
-      setError(!validateURL(initialValue));
-    }
-  }, [initialValue]);
-
   return (
     <div className="w-full">
       {label && <label className="block text-gray-700 font-medium">{label}</label>}
       <Input
-        value={value}
+        value={internalValue}
         onChange={handleChange}
         placeholder={placeholder}
         className={`h-[52px] ${error ? 'border-red-500' : 'border-gray-300'}`}
@@ -50,7 +61,7 @@ export const URLInput: React.FC<URLInputProps> = ({
       />
       {error && (
         <div className="mt-1 text-sm text-red-500">
-          The URL entered is not in the correct format. Please ensure it begins with 'http://' or 'https://' and try again.
+          The URL entered is not in the correct format. Please ensure it begins with 'http://' or 'https://'  and try again.
         </div>
       )}
     </div>

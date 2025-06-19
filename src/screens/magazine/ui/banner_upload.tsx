@@ -156,16 +156,16 @@ export default function UploadBanner({
             type="file"
             accept={supportedFormats.map(format => `image/${format}`).join(',')}
             onChange={handleChange}
-            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+            className="absolute inset-0 opacity-0 cursor-pointer z-10"
           />
 
           {uploadedFile && imageUrl ? (
 
-            <div className="relative">
+            <div className="relative w-full h-full">
               <img
                 src={imageUrl}
                 alt={uploadedFile.name}
-                className="w-full h-full object-cover"
+                className="absolute inset-0 w-full h-full object-cover"
               />
 
               <div className="absolute inset-0 bg-black bg-opacity-40 opacity-0 hover:opacity-100 transition-opacity duration-200">

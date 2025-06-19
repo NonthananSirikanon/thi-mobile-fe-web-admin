@@ -1,1 +1,28 @@
 @import "tailwindcss";
+
+.file-upload-container {
+  display: flex;
+  align-items: center;
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid #d9d9d9;
+  width: 100%;
+}
+
+.custom-file-label {
+  background-color: #ddd;
+  padding: 12px 22px;
+  cursor: pointer;
+  font-size: 14px;
+  color: black;
+  border-right: 1px solid #ccc;
+}
+
+.file-name {
+  padding: 12px 22px;
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+}
